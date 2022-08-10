@@ -2,6 +2,7 @@ import Vue from 'vue'
 import './plugins/axios'
 import App from './App.vue'
 import BaiduMap from 'vue-baidu-map'
+import './plugins/element.js'
 
 Vue.config.productionTip = false
 
