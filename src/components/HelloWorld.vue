@@ -1,26 +1,6 @@
 <template>
   <div class="hello">
     <div class="main">
-<!--      <div class="map">-->
-<!--        <baidu-map-->
-<!--            center="济南"-->
-<!--            :zoom="zoom"-->
-<!--            @ready="handler"-->
-<!--            NavigationControlType="BMAP_NAVIGATION_CONTROL_LARGE"-->
-
-<!--            class="map">-->
-<!--          <bm-control :offset="{width: '10px', height: '10px'}">-->
-<!--            <bm-auto-complete v-model="keyword" :sugStyle="{zIndex: 1}">-->
-<!--              <el-input v-model="keyword" placeholder="在此查找地点"></el-input>-->
-<!--            </bm-auto-complete>-->
-<!--          </bm-control>-->
-<!--          <bm-local-search :keyword="keyword" :auto-viewport="true"></bm-local-search>-->
-<!--          <bm-navigation anchor="BMAP_ANCHOR_TOP_RIGHT" :show-zoom-info=false>-->
-<!--          </bm-navigation>-->
-<!--          <bm-geolocation anchor="BMAP_ANCHOR_BOTTOM_RIGHT" :showAddressBar="true"-->
-<!--                          :autoLocation="true"></bm-geolocation>-->
-<!--        </baidu-map>-->
-<!--      </div>-->
       <el-upload
           class="upload-demo"
           ref="upload"
@@ -28,9 +8,13 @@
           :on-preview="handlePreview"
           :on-remove="handleRemove"
           :file-list="fileList"
-          :auto-upload="true">
+          :data="{userId: this.userID, type: this.signUpType}"
+          :auto-upload="false">
         <el-button slot="trigger" size="small" type="primary">选取文件</el-button>
-        <el-button style="margin-left: 10px;" size="small" type="success" @click="submitUpload">上传到服务器</el-button>
+        <el-button style="margin-left: 10px;"
+                   size="small"
+                   type="success"
+                   @click="submitUpload">上传到服务器</el-button>
         <div slot="tip" class="el-upload__tip">只能上传jpg/png文件，且不超过500kb</div>
       </el-upload>
     </div>
@@ -48,7 +32,14 @@
       <el-input placeholder="电话号码" v-model="tel" clearable></el-input>
       <el-input placeholder="邮箱" v-model="mail" clearable></el-input>
       <el-button @click="signUp"> 注册</el-button>
-      <el-button @click="login"> 登录</el-button>
+      <el-button @click="change2driver" v-if="this.signUpType === 'customer'"> 我是司机 </el-button>
+      <el-button @click="change2customer" v-else> 我是用户 </el-button>
+<!--      <el-button @click="login"> 登录</el-button>-->
+      <el-button @click="disappear"> 消失 </el-button>
+    </div>
+
+    <div class="message">
+      目前, 您将作为 {{this.showingSignType}} 注册.
     </div>
   </div>
 </template>
@@ -70,6 +61,7 @@ export default {
     msg: String
   },
 
+
   data() {
     return {
       center: {lng: 0, lat: 0},
@@ -87,13 +79,29 @@ export default {
     }
   },
 
-  computed: {},
+  computed: {
+    showingSignType() {
+      return this.signUpType === 'customer' ? "顾客" : "司机"
+    }
+  },
   methods: {
     handler({BMap, map}) {
       console.log(BMap, map)
       this.center.lng = 116.404
       this.center.lat = 39.915
       this.zoom = 15
+    },
+
+    change2driver() {
+      this.signUpType = "driver"
+    },
+
+    change2customer() {
+      this.signUpType = "customer"
+    },
+
+    disappear() {
+      this.$router.push('/welcome')
     },
 
     submitUpload() {
@@ -110,13 +118,6 @@ export default {
     united_print(obj) {
       console.log(JSON.stringify(obj, null, 2));
     },
-
-    // id;
-    // name;
-    // tel;
-    // mail;
-    // passwordSha256;
-
     signUp() {
       if (this.signUpType === "customer") {
         this.axiosGet("customer", "POST", {
@@ -150,7 +151,7 @@ export default {
     // },
 
     testClick() {
-      console.log(this.my_sha256("123123"))
+      this.axiosGet("acc/isLogin", "GET", {}, {}, (res) => {this.united_print(res.data)})
     },
 
     my_sha256(str) {

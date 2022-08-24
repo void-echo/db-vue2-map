@@ -11,8 +11,16 @@ import HelloWorld from '@/components/HelloWorld.vue'
 
 export default {
   name: 'Home',
+  beforeCreate: function() {
+    document.body.className = 'home';
+  },
   components: {
     HelloWorld
   }
 }
 </script>
+
+<style>
+
+
+</style>

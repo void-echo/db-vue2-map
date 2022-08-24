@@ -1,16 +1,22 @@
 import Vue from 'vue'
 import './plugins/axios'
 import App from './App.vue'
-import BaiduMap from 'vue-baidu-map'
 import './plugins/element.js'
 import router from './router'
+import VueKinesis from 'vue-kinesis'
+import VueFirework from 'vue-firework'
+import VueTypedJs from 'vue-typed-js'
+
+
+
+Vue.use(VueTypedJs)
+
+
+Vue.use(VueFirework)
+
+Vue.use(VueKinesis)
 
 Vue.config.productionTip = false
-
-Vue.use(BaiduMap, {
-  ak: '2k5OisLCPPfHTLjCuAv6SjaR6rbOs9Yv'
-})
-
 
 new Vue({
   router,
