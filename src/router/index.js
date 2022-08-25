@@ -1,6 +1,7 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
 import Home from '../views/Home.vue'
+import Uploader from "@/components/Uploader";
 
 Vue.use(VueRouter)
 
@@ -43,6 +44,11 @@ const routes = [
     path: '/driver-main',
     name: 'DriverMain',
     component: () => import('../views/DriverMain.vue')
+  },
+  {
+    path: '/test-upload',
+    name: "Uploader",
+    component: () => import('../components/Uploader.vue')
   }
 ]
 

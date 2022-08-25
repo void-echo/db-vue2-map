@@ -2,9 +2,9 @@
   <div class="root">
     <el-container>
       <el-aside width="14%" style="box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 30px">
-        <div class="left_menu" >
+        <div class="left_menu">
           <el-row class="my_row">
-            <el-col >
+            <el-col>
               <el-menu
                   default-active="1"
                   class="el-menu-vertical-demo"
@@ -14,15 +14,15 @@
                   <span slot="title">地图</span>
                 </el-menu-item>
 
-                <el-menu-item index="2">
+                <el-menu-item index="2" @click="SIDE_DING_DAN">
                   <i class="el-icon-menu"></i>
-                  <span slot="title" @click="layOut_.DingDanVisible = true">订单</span>
+                  <span slot="title">订单</span>
                 </el-menu-item>
-                <el-menu-item index="3">
+                <el-menu-item index="3" @click="SIDE_YU_E">
                   <i class="el-icon-document"></i>
-                  <span slot="title" >余额</span>
+                  <span slot="title">收益</span>
                 </el-menu-item>
-                <el-menu-item index="4">
+                <el-menu-item index="4" @click="SIDE_WO_DE">
                   <i class="el-icon-setting"></i>
                   <span slot="title">我的</span>
                 </el-menu-item>
@@ -40,15 +40,27 @@
           <br/><br/>
           <el-card shadow="always" style=" border-radius: 30px">
             <el-row>
-              <el-col :span="6"><div class="grid-content bg-purple">
-                <el-button @click="catchNewBill" v-if="this.requestProcessing">接单</el-button>
-              </div></el-col>
-              <el-col :span="6"><div class="grid-content bg-purple">
-                <el-button @click="customerGotOnCar">确认乘客已经上车</el-button>
-              </div></el-col>
-              <el-col :span="6"><div class="grid-content bg-purple">
-                <el-button @click="endThisDrearyRide">结束订单</el-button>
-              </div></el-col>
+              <el-col :span="6">
+                <div class="grid-content bg-purple">
+                  <el-button @click="catchNewBill" v-if="this.requestProcessing">接单</el-button>
+                </div>
+              </el-col>
+              <el-col :span="6">
+                <div class="grid-content bg-purple">
+                  <el-button @click="customerGotOnCar">确认乘客已经上车</el-button>
+                </div>
+              </el-col>
+              <el-col :span="6">
+                <div class="grid-content bg-purple">
+                  <el-button @click="endThisDrearyRide">结束订单</el-button>
+                </div>
+              </el-col>
+
+              <el-col :span="6">
+                <div class="grid-content bg-purple">
+                  <el-button @click="openGPS">GPS</el-button>
+                </div>
+              </el-col>
             </el-row>
           </el-card>
         </div>
@@ -77,12 +89,36 @@
 
     </el-dialog>
 
-    <el-dialog title="余额" :visible.sync="layOut_.YuEVisible">
+    <el-dialog title="收益" :visible.sync="layOut_.YuEVisible">
 
     </el-dialog>
 
     <el-dialog title="我的" :visible.sync="layOut_.WoDeVisible">
+      <div class="profile" v-if="profileNotEditing">
+        <div v-if="driver.haveImg">
+          <div style="align-items: center; text-align: center">
+            <div class="grid-content bg-purple">
+              <avatar :src="driver.image" :size="100"></avatar>
+            </div>
+          </div>
+        </div>
+        <el-descriptions class="margin-top" :column="2">
+          <el-descriptions-item label="用户名"> {{ this.id_ }}</el-descriptions-item>
+          <el-descriptions-item label="昵称"> {{ this.driver.name }}</el-descriptions-item>
+          <el-descriptions-item label="电话"> {{ this.driver.tel }}</el-descriptions-item>
+          <el-descriptions-item label="邮箱"> {{ this.driver.mail }}</el-descriptions-item>
+        </el-descriptions>
+        <div>
+          <el-button v-if="!driver.haveImg" @click="changeImage"> 添加头像  </el-button>
+          <el-button v-else @click="changeImage"> 修改头像 </el-button>
+          <el-button> 修改</el-button>
+          <el-button @click="layOut_.WoDeVisible = false"> 关闭</el-button>
+        </div>
+      </div>
 
+      <el-dialog :visible.sync="innerVisible" append-to-body>
+        <uploader :user-id="driver.id" sign-up-type="driver"></uploader>
+      </el-dialog>
     </el-dialog>
 
 
@@ -92,6 +128,7 @@
 <script>
 import AMapLoader from '@amap/amap-jsapi-loader';
 import axios from "axios";
+import Uploader from "@/components/Uploader";
 import Avatar from 'vue-avatar'
 
 
@@ -99,7 +136,8 @@ export default {
   name: "DriverMain",
 
   components: {
-    // Avatar
+    Uploader,
+    Avatar
   },
 
   mounted() {
@@ -129,6 +167,9 @@ export default {
         YuEVisible: false,
         WoDeVisible: false
       },
+      innerVisible: false,
+      profileNotEditing: true,
+      geoVar: null,
 
       billPrice: "",
       centerDialogVisible: false,
@@ -156,7 +197,14 @@ export default {
       startedMoving: false,
       exe: null,  // execute per second 4 place update
       exe__: null,   // execute per 2 second 4 view fit
-      customer: null,
+      customer: {
+        id: "",
+        name: "",
+        tel: "",
+        mail: "",
+        haveImg: false,
+        image: "",
+      },
       customer_marker: null,
       destination: [],
       destination_marker: null,
@@ -208,7 +256,7 @@ export default {
       AMapLoader.load({
         key: "ca1beeb0abaeca2b3c3ab0a5ce115a6d",             // 申请好的Web端开发者Key，首次调用 load 时必填
         version: "2.0",      // 指定要加载的 JSAPI 的版本，缺省时默认为 1.4.15
-        plugins: ['AMap.Driving', 'AMap.ToolBar'],
+        plugins: ['AMap.Driving', 'AMap.ToolBar', 'AMap.Geolocation', 'AMap.Scale'],
         // 需要使用的的插件列表，如比例尺'AMap.Scale等
       }).then((AMap_) => {
         this.map = new AMap_.Map("mapContainer", {  //设置地图容器id
@@ -223,10 +271,87 @@ export default {
           this.map.addControl(toolbar);
         });
 
+        this.geoVar = new AMap.Geolocation({
+          // 是否使用高精度定位，默认：true
+          enableHighAccuracy: true,
+          // 设置定位超时时间，默认：无穷大
+          timeout: 10000,
+          // 定位按钮的停靠位置的偏移量
+          offset: [10, 20],
+          //  定位成功后调整地图视野范围使定位位置及精度范围视野内可见，默认：false
+          zoomToAccuracy: true,
+          //  定位按钮的排放位置,  RB表示右下
+          position: 'RB'
+        })
+
+        this.map.addControl(new AMap.Scale())
       }).catch(e => {
         console.log(e);
       });
     },
+
+    SIDE_DING_DAN() {
+      this.layOut_.DingDanVisible = true
+    },
+
+    SIDE_YU_E() {
+      this.layOut_.YuEVisible = true
+    },
+
+    SIDE_WO_DE() {
+      console.log("点击：我的")
+      this.init_profile(this.id_)
+    },
+
+    SIDE_DI_TU() {
+      this.layOut_.DiTuVisible = true
+    },
+
+
+    openGPS() {
+      AMap.plugin('AMap.Geolocation', () => {
+            if (this.notNil(this.geoVar)) {
+              this.geoVar.getCurrentPosition((status, result) => {
+                console.log(status)
+                if (status === 'complete') {
+                  this.onComplete(result)
+                } else {
+                  this.onError(result)
+                }
+              });
+            }
+          }
+      )
+    },
+
+    onComplete(data) {
+      console.log("定位成功，定位信息：")
+      console.log(data)
+      let lng__ = data["position"]["lng"]
+      let lat__ = data["position"]["lat"]
+      if (this.notNil(this.now_status.my_dot_marker)) {
+        this.map.remove(this.now_status.my_dot_marker)
+      }
+      this.now_status.my_place[0] = lng__
+      this.now_status.my_place[1] = lat__
+
+      this.del_my_marker_if_exist()
+      // data是具体的定位信息
+      this.now_status.my_dot_marker = new AMap.Marker({
+        position: this.now_status.my_place,
+        title: '我的位置'
+      })
+
+      this.map.add(this.now_status.my_dot_marker)
+      this.map.setFitView();
+    },
+
+    onError(data) {
+      console.log("定位失败，定位信息：")
+      console.log(data)
+      // 定位出错
+    },
+
 
     init_socket() {
       if (this.notNil(this.my_socket.socket)) {
@@ -295,16 +420,22 @@ export default {
       this.axiosGet_Config("running/driverInfo", "GET", {driverId: id}, {},
           (response) => {
             let dt = response.data;
+            this.driver.id = dt["id"]
             this.driver.mail = dt["mail"];
             this.driver.tel = dt["tel"];
             this.driver.name = dt["name"];
           });
 
-      this.axiosGet_Header("file/get-pic", "GET", {type: "customer", id: id}, {'Content-type': 'image/jpeg'},
+      this.axiosGet_Header("file/get-pic", "GET", {type: "driver", id: id}, {'Content-type': 'image/jpeg'},
           (response) => {
-            this.customer.haveImg = false;
-            this.customer.image = 'data:image/jpg;base64,'.concat(this.customer.image.concat(response.data));
-            this.customer.haveImg = true;
+            if (response.data === "") {
+
+            } else {
+              this.driver.haveImg = false;
+              this.driver.image = 'data:image/jpg;base64,'.concat(response.data);
+              this.driver.haveImg = true;
+            }
+            this.layOut_.WoDeVisible = true
           });
     },
 
@@ -498,6 +629,11 @@ export default {
     },
 
 
+    changeImage() {
+      this.innerVisible = true
+    },
+
+
     setCustomerDot(lng, lat) {
       this.customer_marker = new AMap.Marker({
         position: [lng, lat],
@@ -554,8 +690,8 @@ export default {
 
 <style scoped>
 #mapContainer {
-  width: 800px;
-  height: 400px;
+  width: 100%;
+  height: 650px;
 }
 
 body, html {

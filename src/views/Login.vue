@@ -60,7 +60,7 @@ export default {
       this.axiosGet("acc/login", "GET",
           {
             user: this.userID,
-            pwdSha: this.my_sha256(this.pwd),
+            pwdSha: this.pwdEncode(this.pwd),
             userType: this.type_
           }, {},
           (response) => {
@@ -101,6 +101,12 @@ export default {
       return sjcl.codec.hex.fromBits(hash);
     },
 
+
+    pwdEncode(pwd) {
+      let a = this.my_sha256(pwd)
+      let total = this.userID + a;
+      return this.my_sha256(total);
+    },
   }
 }
 </script>

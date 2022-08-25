@@ -2,29 +2,27 @@
   <div class="root">
     <el-container>
       <el-aside width="14%" style="box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 30px">
-        <div class="left_menu" >
+        <div class="left_menu">
           <el-row class="my_row">
-            <el-col >
+            <el-col>
               <el-menu
                   default-active="1"
                   class="el-menu-vertical-demo"
-                  @open="handleOpen"
-                  @close="handleClose"
                   style="height: 100vh">
                 <el-menu-item index="1">
                   <i class="el-icon-menu"></i>
                   <span slot="title">地图</span>
                 </el-menu-item>
 
-                <el-menu-item index="2">
+                <el-menu-item index="2" @click="SIDE_DING_DAN">
                   <i class="el-icon-menu"></i>
-                  <span slot="title" @click="layOut_.DingDanVisible = true">订单</span>
+                  <span slot="title">订单</span>
                 </el-menu-item>
-                <el-menu-item index="3">
+                <el-menu-item index="3" @click="SIDE_YU_E">
                   <i class="el-icon-document"></i>
-                  <span slot="title" >余额</span>
+                  <span slot="title">余额</span>
                 </el-menu-item>
-                <el-menu-item index="4">
+                <el-menu-item index="4" @click="SIDE_WO_DE">
                   <i class="el-icon-setting"></i>
                   <span slot="title">我的</span>
                 </el-menu-item>
@@ -42,36 +40,24 @@
           <br/><br/>
           <el-card shadow="always" style=" border-radius: 30px">
             <el-row>
-              <el-col :span="6"><div class="grid-content bg-purple">
-                <el-button @click="bindClickEvent"> 选取点</el-button>
-              </div></el-col>
-              <el-col :span="6"><div class="grid-content bg-purple">
-                <el-button @click="toHere"> 到这儿去</el-button>
-              </div></el-col>
-              <el-col :span="6"><div class="grid-content bg-purple">
-                <el-button @click="init_profile(id_)"> init_profile</el-button>
-              </div></el-col>
+              <el-col :span="6">
+                <div class="grid-content bg-purple">
+                  <el-button @click="bindClickEvent"> 选取点</el-button>
+                </div>
+              </el-col>
+              <el-col :span="6">
+                <div class="grid-content bg-purple">
+                  <el-button @click="toHere"> 到这儿去</el-button>
+                </div>
+              </el-col>
+              <el-col :span="6">
+                <div class="grid-content bg-purple">
+                  <el-button @click="openGPS">GPS</el-button>
+                </div>
+              </el-col>
             </el-row>
           </el-card>
-
-          <div class="profile">
-            <div v-if="customer.haveImg">
-              <avatar :src="customer.image">
-
-              </avatar>
-              {{ this.id_ }}
-              <br/>
-              {{ this.customer.name }}
-              <br/>
-              {{ this.customer.tel }}
-              <br/>
-              {{ this.customer.mail }}
-            </div>
-          </div>
-
-
-          <div class="viewController">
-
+          <div class="hidden__">
           </div>
         </div>
 
@@ -82,21 +68,51 @@
       </el-main>
     </el-container>
 
-    <el-dialog title="订单" :visible.sync="layOut_.DingDanVisible">
+    <el-dialog title="订单" :visible.sync="layOut_.DingDanVisible"
+               style="box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 30px">
 
     </el-dialog>
 
-    <el-dialog title="余额" :visible.sync="layOut_.YuEVisible">
+    <el-dialog title="余额" :visible.sync="layOut_.YuEVisible"
+               style="box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 30px">
 
     </el-dialog>
 
-    <el-dialog title="我的" :visible.sync="layOut_.WoDeVisible">
+    <div style="box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 30px">
+      <el-dialog title="我的" :visible.sync="layOut_.WoDeVisible" center>
+        <div class="profile" v-if="profileNotEditing">
+          <div v-if="customer.haveImg">
+            <div style="align-items: center; text-align: center">
+              <div class="grid-content bg-purple">
+                <avatar :src="customer.image" :size="100"></avatar>
+              </div>
+            </div>
+          </div>
+          <el-descriptions class="margin-top" :column="2">
+            <el-descriptions-item label="用户名"> {{ this.id_ }}</el-descriptions-item>
+            <el-descriptions-item label="昵称"> {{ this.customer.name }}</el-descriptions-item>
+            <el-descriptions-item label="电话"> {{ this.customer.tel }}</el-descriptions-item>
+            <el-descriptions-item label="邮箱"> {{ this.customer.mail }}</el-descriptions-item>
+          </el-descriptions>
+          <div>
+            <el-button v-if="!customer.haveImg" @click="changeImage"> 添加头像</el-button>
+            <el-button v-else @click="changeImage"> 修改头像</el-button>
+            <el-button> 修改</el-button>
+            <el-button @click="layOut_.WoDeVisible = false"> 关闭</el-button>
+          </div>
+        </div>
 
-    </el-dialog>
+        <el-dialog :visible.sync="innerVisible" append-to-body>
+          <uploader :user-id="customer.id" sign-up-type="customer"></uploader>
+        </el-dialog>
+
+      </el-dialog>
+
+    </div>
 
     <el-dialog title="您想为这次的订单打几分？" :visible.sync="give_score_dialog_visible">
-      <el-input placeholder="评分(可选)" v-model="my_score" clearable></el-input>
-      <el-button @click="give_score"> 确定 </el-button>
+      <el-input-number placeholder="评分(可选)" v-model="my_score" clearable></el-input-number>
+      <el-button @click="give_score"> 确定</el-button>
     </el-dialog>
 
   </div>
@@ -105,13 +121,15 @@
 <script>
 import AMapLoader from '@amap/amap-jsapi-loader';
 import axios from "axios";
-import Avatar from 'vue-avatar'
+import Avatar from 'vue-avatar';
+import Uploader from "@/components/Uploader";
 
 export default {
   name: "CustomerMain",
 
   components: {
-    Avatar
+    Avatar,
+    Uploader
   },
 
   mounted() {
@@ -124,8 +142,12 @@ export default {
 
   data() {
     return {
+      innerVisible: false,
       moneyToPay: "",
       billId: "",
+      geoVar: null,
+      profileDone: false,
+      profileNotEditing: true,
       layOut_: {
         DiTuVisible: true,
         DingDanVisible: false,
@@ -133,7 +155,7 @@ export default {
         WoDeVisible: false
       },
       give_score_dialog_visible: false,
-      my_score: "",
+      my_score: 5,
       spring_boot_url_base: "http://localhost:17747/",
       customer: {
         id: "",
@@ -220,12 +242,14 @@ export default {
       );
       this.$message("正在为您寻找最近的司机......")
     },
-
+    changeImage() {
+      this.innerVisible = true
+    },
     initMap() {
       AMapLoader.load({
         key: "ca1beeb0abaeca2b3c3ab0a5ce115a6d",             // 申请好的Web端开发者Key，首次调用 load 时必填
         version: "2.0",      // 指定要加载的 JSAPI 的版本，缺省时默认为 1.4.15
-        plugins: ['AMap.Driving', 'AMap.ToolBar'],
+        plugins: ['AMap.Driving', 'AMap.ToolBar', 'AMap.Geolocation', 'AMap.Scale'],
         // 需要使用的的插件列表，如比例尺'AMap.Scale等
       }).then((AMap_) => {
         this.map = new AMap_.Map("mapContainer", {  //设置地图容器id
@@ -239,9 +263,82 @@ export default {
           this.map.addControl(toolbar);
         });
 
+        this.geoVar = new AMap.Geolocation({
+          // 是否使用高精度定位，默认：true
+          enableHighAccuracy: true,
+          // 设置定位超时时间，默认：无穷大
+          timeout: 10000,
+          // 定位按钮的停靠位置的偏移量
+          offset: [10, 20],
+          //  定位成功后调整地图视野范围使定位位置及精度范围视野内可见，默认：false
+          zoomToAccuracy: true,
+          //  定位按钮的排放位置,  RB表示右下
+          position: 'RB'
+        })
+        this.map.addControl(new AMap.Scale())
       }).catch(e => {
         console.log(e);
       });
+    },
+
+    openGPS() {
+      AMap.plugin('AMap.Geolocation', () => {
+            if (this.notNil(this.geoVar)) {
+              this.geoVar.getCurrentPosition((status, result) => {
+                console.log(status)
+                if (status === 'complete') {
+                  this.onComplete(result)
+                } else {
+                  this.onError(result)
+                }
+              });
+            }
+          }
+      )
+    },
+    onComplete(data) {
+      console.log("定位成功，定位信息：")
+      console.log(data)
+      let lng__ = data["position"]["lng"]
+      let lat__ = data["position"]["lat"]
+      if (this.notNil(this.now_status.my_dot_marker)) {
+        this.map.remove(this.now_status.my_dot_marker)
+      }
+      this.now_status.my_place[0] = lng__
+      this.now_status.my_place[1] = lat__
+
+      this.del_my_marker_if_exist()
+      // data是具体的定位信息
+      this.now_status.my_dot_marker = new AMap.Marker({
+        position: this.now_status.my_place,
+        title: '我的位置'
+      })
+
+      this.map.add(this.now_status.my_dot_marker)
+      this.map.setFitView();
+    },
+
+    onError(data) {
+      console.log("定位失败，定位信息：")
+      console.log(data)
+      // 定位出错
+    },
+
+    SIDE_DING_DAN() {
+      this.layOut_.DingDanVisible = true
+    },
+
+    SIDE_YU_E() {
+      this.layOut_.YuEVisible = true
+    },
+
+    SIDE_WO_DE() {
+      console.log("点击：我的")
+      this.init_profile(this.id_)
+    },
+
+    SIDE_DI_TU() {
+      this.layOut_.DiTuVisible = true
     },
 
 
@@ -398,7 +495,9 @@ export default {
         }
         if (this.notNil(obj["billId"])) {
           this.billId = obj["billId"]
-          setTimeout(this.give_score, 100)
+          setTimeout(() => {
+            this.give_score_dialog_visible = true
+          }, 100)
         }
         if (this.notNil(obj["FINISHED"])) {
           this.$message({
@@ -473,7 +572,7 @@ export default {
     give_score() {
       this.axiosGet_Header("running/PayAndGiveScore", "GET", {
         billId: this.billId,
-        score: parseInt(this.my_score)
+        score_: this.my_score
       }, {}, () => {
         this.$message({
           message: "支付并打分成功",
@@ -512,19 +611,27 @@ export default {
       this.axiosGet_Config("running/customerInfo", "GET", {customerId: id}, {},
           (response) => {
             let dt = response.data;
+            this.customer.id = dt["id"]
             this.customer.mail = dt["mail"];
             this.customer.tel = dt["tel"];
             this.customer.name = dt["name"];
+
+            this.axiosGet_Header("file/get-pic", "GET", {type: "customer", id: id}, {'Content-type': 'image/jpeg'},
+                (response) => {
+                  if (response.data === "") {
+
+                  } else {
+                    this.customer.haveImg = false;
+                    this.customer.image = 'data:image/jpg;base64,'.concat(response.data);
+                    this.customer.haveImg = true;
+
+                  }
+                  this.layOut_.WoDeVisible = true
+                });
+
           });
 
-      this.axiosGet_Header("file/get-pic", "GET", {type: "customer", id: id}, {'Content-type': 'image/jpeg'},
-          (response) => {
-            this.customer.haveImg = false;
-            this.customer.image = 'data:image/jpg;base64,'.concat(this.customer.image.concat(response.data));
-            this.customer.haveImg = true;
-          });
     },
-
 
 
     axiosGet_Config(url, httpType, params, _config, lambdaThen) {
