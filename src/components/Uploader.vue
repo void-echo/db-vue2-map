@@ -26,10 +26,27 @@
 export default {
   name: "Uploader",
 
+  updated() {
+    console.log("新的文件上传器被更新了")
+    console.log("userId: " + this.my_data.userId)
+    console.log("type: " + this.my_data.type)
+  },
+
   props: {
     userId: String,
-    signUpType: String,   // customer | driver
+    signUpType: String,   // customer | driver,
+    hotUpdate: {
+      type: Boolean,
+      default: false
+    }
   },
+
+  mounted() {
+    if (this.hotUpdate) {
+
+    }
+  },
+
   data() {
     return {
       my_data: {
@@ -54,16 +71,15 @@ export default {
       }
     },
     handleRemove(file, fileList) {
-      console.log(file, fileList);
+      // console.log(file, fileList);
     },
     handlePreview(file) {
-      console.log(file);
+      // console.log(file);
     },
 
     united_print(obj) {
       console.log(JSON.stringify(obj, null, 2));
     },
-
   }
 }
 </script>

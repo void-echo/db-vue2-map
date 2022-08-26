@@ -26,6 +26,10 @@
                   <i class="el-icon-setting"></i>
                   <span slot="title">我的</span>
                 </el-menu-item>
+                <el-menu-item index="5" @click="SIDE_CAR">
+                  <i class="el-icon-setting"></i>
+                  <span slot="title">汽车</span>
+                </el-menu-item>
               </el-menu>
             </el-col>
           </el-row>
@@ -85,15 +89,46 @@
   </span>
     </el-dialog>
 
-    <el-dialog title="订单" :visible.sync="layOut_.DingDanVisible">
-
+    <el-dialog title="订单" :visible.sync="layOut_.DingDanVisible" width="90%" fullscreen
+               style="box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 30px;margin: 5%;">
+      <div>
+        <!--  {
+            "id": "2022-08-25 20:19:26.568void-echo",
+            "time": "2022-08-25T12:19:27.000+00:00",
+            "money": "12",
+            "score": null,
+            "driverId": "REAL_OLD_DRIVER",
+            "customerId": "void-echo",
+            "status": "NOT_SCORED",
+            "duration": "PT35.1368652S",
+            "fromPlace": "[105.582725, 36.816636]",
+            "toPlace": "[108.957293, 31.451608]"
+          },      -->
+        <el-table
+            :data="allBillsOfMe"
+            height="500"
+            border
+            style="width: 100%">
+          <el-table-column prop="id" label="编号" width="180"></el-table-column>
+          <el-table-column prop="time" label="姓名" width="180"></el-table-column>
+          <el-table-column prop="money" label="金额"></el-table-column>
+          <el-table-column prop="score" label="评分"></el-table-column>
+          <el-table-column prop="driverId" label="司机用户名"></el-table-column>
+          <el-table-column prop="customerId" label="顾客用户名"></el-table-column>
+          <el-table-column prop="status" label="状态"></el-table-column>
+          <el-table-column prop="duration" label="持续时间"></el-table-column>
+          <el-table-column prop="fromPlace" label="从"></el-table-column>
+          <el-table-column prop="toPlace" label="到"></el-table-column>
+        </el-table>
+      </div>
     </el-dialog>
 
     <el-dialog title="收益" :visible.sync="layOut_.YuEVisible">
 
     </el-dialog>
 
-    <el-dialog title="我的" :visible.sync="layOut_.WoDeVisible">
+    <el-dialog title="我的" :visible.sync="layOut_.WoDeVisible" fullscreen
+               style="box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 30px;margin: 12%;">
       <div class="profile" v-if="profileNotEditing">
         <div v-if="driver.haveImg">
           <div style="align-items: center; text-align: center">
@@ -109,19 +144,58 @@
           <el-descriptions-item label="邮箱"> {{ this.driver.mail }}</el-descriptions-item>
         </el-descriptions>
         <div>
-          <el-button v-if="!driver.haveImg" @click="changeImage"> 添加头像  </el-button>
-          <el-button v-else @click="changeImage"> 修改头像 </el-button>
+          <el-button v-if="!driver.haveImg" @click="changeImage"> 添加头像</el-button>
+          <el-button v-else @click="changeImage"> 修改头像</el-button>
           <el-button> 修改</el-button>
           <el-button @click="layOut_.WoDeVisible = false"> 关闭</el-button>
         </div>
       </div>
 
       <el-dialog :visible.sync="innerVisible" append-to-body>
-        <uploader :user-id="driver.id" sign-up-type="driver"></uploader>
+        <uploader :user-id="driver.id" sign-up-type="driver" ></uploader>
       </el-dialog>
     </el-dialog>
 
+    <el-dialog title="汽车" :visible.sync="layOut_.CarVisible" fullscreen style="box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 30px;margin: 12%;">
+      <div>
+        <div v-if="layOut_.haveCar">
 
+        </div>
+
+        <div v-if="!layOut_.haveCar">
+          <div>
+            您还没有绑定车辆哦! <br/> <br/> 点击下方按钮绑定或注册车辆吧.
+          </div>
+          <el-button @click="car_bind__"> 绑定 </el-button>
+          <el-button @click="car_sign_up__"> 注册 </el-button>
+        </div>
+      </div>
+
+      <el-dialog :visible.sync="inner2visible" append-to-body>
+        <div>
+          <div v-if="signUpForCarVisible">
+            <div>ID <el-input v-model="signUpCar.id"> </el-input></div>
+            <div>品牌 <el-input v-model="signUpCar.band"> </el-input></div>
+            <div>最高时速 <el-input-number v-model="signUpCar.max_speed"> </el-input-number></div>
+            <div>车辆类型 <el-input v-model="signUpCar.car_type"> </el-input></div>
+            <div> 在此上传照片 </div>
+            <div>
+              <uploader :userId="signUpCar.id" signUpType="car" v-if="canShowCarSignUpFileUpLoader"></uploader>
+              <el-button @click="car_sign_up_finish">确定</el-button>
+            </div>
+          </div>
+          <div v-if="bindCarVisible">
+            请选择要绑定的汽车 ID: <br/><br/>
+            <div>
+              <el-input v-model="carIdToBind"></el-input>
+            </div>
+            <div>
+              <el-button @click="car_bind_finish">确定</el-button>
+            </div>
+          </div>
+        </div>
+      </el-dialog>
+    </el-dialog>
   </div>
 </template>
 
@@ -149,6 +223,10 @@ export default {
 
 
   computed: {
+    canShowCarSignUpFileUpLoader() {
+      console.log("能显示车辆的 uploader 吗? " + ((this.signUpCar.band !== "") && (this.notNil(this.signUpCar.id))))
+      return ((this.signUpCar.band !== "") && (this.notNil(this.signUpCar.id)))
+    },
     id_() {
       return this.$route.params.id_;
     },
@@ -161,13 +239,26 @@ export default {
 
   data() {
     return {
+      allBillsOfMe: null,
       layOut_: {
         DiTuVisible: true,
         DingDanVisible: false,
         YuEVisible: false,
-        WoDeVisible: false
+        WoDeVisible: false,
+        CarVisible: false,
+        haveCar: false
       },
       innerVisible: false,
+      signUpForCarVisible: false,
+      bindCarVisible: false,
+      inner2visible: false,       // inner2visible = signUpForCarVisible | bindCarVisible 一定要注意
+      signUpCar: {
+        id: "",
+        band: "",
+        max_speed: 40,
+        car_type: ""
+      },
+      carIdToBind: "",
       profileNotEditing: true,
       geoVar: null,
 
@@ -182,6 +273,14 @@ export default {
         mail: "",
         haveImg: false,
         image: "",
+        carId: "",
+        hisCar: {
+          id: "",
+          use_start_time: "",
+          band: "",
+          type: "",
+          max_speed: 0
+        }
       },
       map: null,
       now_status: {
@@ -238,6 +337,16 @@ export default {
 
 
   methods: {
+    getAllBillsOfMe() {
+      this.axiosGet_Config("bill/get-all-by-driver", "GET", {
+        driverId: this.id_
+      }, {}, (res) => {
+        if (res.status === 200) {
+          this.allBillsOfMe = res.data;
+          this.layOut_.DingDanVisible = true
+        }
+      })
+    },
     confirmBillPrice() {
       this.axiosGet_Config("running/store1bill", "GET", {
         billId: this.preBillId,
@@ -291,7 +400,7 @@ export default {
     },
 
     SIDE_DING_DAN() {
-      this.layOut_.DingDanVisible = true
+      this.getAllBillsOfMe()
     },
 
     SIDE_YU_E() {
@@ -305,6 +414,84 @@ export default {
 
     SIDE_DI_TU() {
       this.layOut_.DiTuVisible = true
+    },
+
+    SIDE_CAR() {
+      this.UPDATE_HIS_CAR()
+      console.log("他的车如下")
+      console.log(this.driver.hisCar)
+      if (this.notNil(this.driver.carId) && this.driver.carId !== "") {
+        this.layOut_.haveCar = true
+        console.log("有车")
+      } else {
+        this.layOut_.haveCar = false
+        console.log("没车")
+      }
+      this.layOut_.CarVisible = true
+    },
+
+
+    // 以下两个:  v-if="!layOut_.haveCar" 的情况下有对应的按钮
+    car_bind__(){
+      this.bindCarVisible = true
+      this.inner2visible = true
+    },
+
+    car_bind_finish() {
+      /*     @RequestMapping("bind-car-to-driver")
+    public ResponseEntity<Boolean> bindCar2driver(String driverId, String carId) {
+ */
+      this.axiosGet_Config("running/bind-car-to-driver", "GET", {
+        driverId: this.id_,
+        carId: this.carIdToBind
+      }, {}, (res) => {
+        if(res.status === 200 && res.data === true) {
+          this.$message({
+            message: "绑定车辆成功! ",
+            type: "success",
+            showClose: true
+          })
+        }
+      })
+      this.driver.carId = this.carIdToBind
+      this.bindCarVisible = false
+      this.inner2visible = false
+      setTimeout(() => {
+        this.layOut_.CarVisible = false;
+      } ,300)
+    },
+
+    car_sign_up__() {
+      this.signUpForCarVisible = true
+      this.inner2visible = true
+    },
+    // layout.CarVisible
+    // signUpForCarVisible: false,
+    // bindCarVisible: false,
+    // inner2visible: false,       // inner2visible = signUpForCarVisible | bindCarVisible 一定要注意
+    car_sign_up_finish() {
+      // String driverId, String carId, String band, int max_speed, String carType
+      this.axiosGet_Config("running/sign-up-new-car", "GET", {
+        driverId: this.id_,
+        carId: this.signUpCar.id,
+        band: this.signUpCar.band,
+        max_speed: this.signUpCar.max_speed,
+        carType: this.signUpCar.car_type
+      }, {}, (res) => {
+        if (res.status === 200 && res.data === true) {
+          this.driver.carId = this.signUpCar.id
+          this.$message({
+            message: "注册车辆成功! ",
+            type: "success",
+            showClose: true
+          })
+        }
+      })
+      this.signUpForCarVisible = false
+      this.inner2visible = false
+      setTimeout(() => {
+        this.layOut_.CarVisible = false;
+      } ,300)
     },
 
 
@@ -424,12 +611,14 @@ export default {
             this.driver.mail = dt["mail"];
             this.driver.tel = dt["tel"];
             this.driver.name = dt["name"];
+            this.driver.carId = dt["carId"];
+            this.UPDATE_HIS_CAR()
           });
 
       this.axiosGet_Header("file/get-pic", "GET", {type: "driver", id: id}, {'Content-type': 'image/jpeg'},
           (response) => {
             if (response.data === "") {
-
+              console.log("没有汽车图片")
             } else {
               this.driver.haveImg = false;
               this.driver.image = 'data:image/jpg;base64,'.concat(response.data);
@@ -437,6 +626,37 @@ export default {
             }
             this.layOut_.WoDeVisible = true
           });
+    },
+
+
+    UPDATE_HIS_CAR() {
+      if ((this.driver.carId !== "") && this.notNil(this.driver.carId)) {
+        this.layOut_.haveCar = true
+        console.log("UPDATE_HIS_CAR() 显示司机有没有车?" + ((this.driver.carId !== "") && this.notNil(this.driver.carId)))
+        this.axiosGet_Config("car/" + this.driver.carId, "GET", {}, {},
+            (res) => {
+              let dt = res.data;
+              if (this.notNil(dt)) {
+                if (this.notNil(dt["id"])) {
+                  this.driver.hisCar.id = dt["id"]
+                }
+                if (this.notNil(dt["startUsingTime"])) {
+                  this.driver.hisCar.use_start_time = dt["startUsingTime"]
+                }
+                if (this.notNil(dt["band"])) {
+                  this.driver.hisCar.band = dt["band"]
+                }
+                if (this.notNil(dt["carType"])) {
+                  this.driver.hisCar.type = dt["carType"]
+                }
+                if (this.notNil(dt["maxSpeed"])) {
+                  this.driver.hisCar.max_speed = dt["maxSpeed"]
+                }
+              }
+            })
+
+      }
+
     },
 
 

@@ -155,7 +155,7 @@ export default {
       })
 
       setTimeout(() => {
-        let loginType = this.userName
+        let loginType = this.signUpType
         //
         this.$router.push({
           name: "Login",
