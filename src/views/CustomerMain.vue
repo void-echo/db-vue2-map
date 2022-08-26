@@ -52,6 +52,11 @@
               </el-col>
               <el-col :span="6">
                 <div class="grid-content bg-purple">
+                  <el-button @click="YO_YAKU"> 发起预约单</el-button>
+                </div>
+              </el-col>
+              <el-col :span="6">
+                <div class="grid-content bg-purple">
                   <el-button @click="openGPS">GPS</el-button>
                 </div>
               </el-col>
@@ -68,9 +73,26 @@
       </el-main>
     </el-container>
 
-    <el-dialog title="订单" :visible.sync="layOut_.DingDanVisible"
-               style="box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 30px">
-
+    <el-dialog title="订单" :visible.sync="layOut_.DingDanVisible" width="90%" fullscreen
+               style="box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 30px;margin: 5%;">
+      <div>
+        <el-table
+            :data="allBillsOfMe"
+            height="500"
+            border
+            style="width: 100%">
+          <el-table-column prop="id" label="编号" width="180"></el-table-column>
+          <el-table-column prop="time" label="姓名" width="180"></el-table-column>
+          <el-table-column prop="money" label="金额"></el-table-column>
+          <el-table-column prop="score" label="评分"></el-table-column>
+          <el-table-column prop="driverId" label="司机用户名"></el-table-column>
+          <el-table-column prop="customerId" label="顾客用户名"></el-table-column>
+          <el-table-column prop="status" label="状态"></el-table-column>
+          <el-table-column prop="duration" label="持续时间"></el-table-column>
+          <el-table-column prop="fromPlace" label="从"></el-table-column>
+          <el-table-column prop="toPlace" label="到"></el-table-column>
+        </el-table>
+      </div>
     </el-dialog>
 
     <el-dialog title="余额" :visible.sync="layOut_.YuEVisible"
@@ -142,6 +164,7 @@ export default {
 
   data() {
     return {
+      allBillsOfMe: null,
       innerVisible: false,
       moneyToPay: "",
       billId: "",
@@ -201,7 +224,17 @@ export default {
       },
 
       on_car: false,
-      exe: null
+      exe: null,
+      bill: {
+        id: "",
+        timeStart: null,
+        timeEnd: null,
+        driver_id: "",
+        customer_id: "",
+        status: ""
+      },
+
+      selectedYoYaKuTime: null,
     }
   },
 
@@ -241,6 +274,10 @@ export default {
           }
       );
       this.$message("正在为您寻找最近的司机......")
+    },
+
+    YO_YAKU() {
+
     },
     changeImage() {
       this.innerVisible = true
@@ -325,7 +362,7 @@ export default {
     },
 
     SIDE_DING_DAN() {
-      this.layOut_.DingDanVisible = true
+      this.getAllBillsOfMe()
     },
 
     SIDE_YU_E() {
@@ -339,6 +376,18 @@ export default {
 
     SIDE_DI_TU() {
       this.layOut_.DiTuVisible = true
+    },
+
+
+    getAllBillsOfMe() {
+      this.axiosGet_Config("bill/get-all-by-customer", "GET", {
+        customerId: this.id_
+      }, {}, (res) => {
+        if (res.status === 200) {
+          this.allBillsOfMe = res.data;
+          this.layOut_.DingDanVisible = true
+        }
+      })
     },
 
 
