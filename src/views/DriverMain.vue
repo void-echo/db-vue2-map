@@ -51,6 +51,11 @@
               </el-col>
               <el-col :span="6">
                 <div class="grid-content bg-purple">
+                  <el-button @click="processYoYaKu" v-if="yoYaKu.btmVisible">处理预约单</el-button>
+                </div>
+              </el-col>
+              <el-col :span="6">
+                <div class="grid-content bg-purple">
                   <el-button @click="customerGotOnCar">确认乘客已经上车</el-button>
                 </div>
               </el-col>
@@ -115,6 +120,18 @@
 
     </el-dialog>
 
+    <el-dialog title="发现新的预约订单" :visible.sync="yoYaKu.confirmDialogVisible" fullscreen
+               style="box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 30px;margin: 12%;">
+      <div>
+        确认接单吗？
+      </div>
+
+      <span slot="footer">
+        <el-button @click="cancelYoYaKuBill"> 取消 </el-button>
+        <el-button @click="handleYoYaKuBill"> 确定接单 </el-button>
+      </span>
+    </el-dialog>
+
     <el-dialog title="我的" :visible.sync="layOut_.WoDeVisible" fullscreen
                style="box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 30px;margin: 12%;">
       <div class="profile" v-if="profileNotEditing">
@@ -170,7 +187,7 @@
           </el-descriptions>
           <div>
             <el-button v-if="!driver.hisCar.haveImg" @click="changeImage2"> 添加头像</el-button>
-            <el-button v-else @click="changeImage2"> 修改头像</el-button>
+            <el-button v-else @click="changeImage2"> 修改车辆照片 </el-button>
             <el-button> 修改</el-button>
             <el-button @click="layOut_.CarVisible = false"> 关闭</el-button>
           </div>
@@ -352,6 +369,19 @@ export default {
         driving_result: null
       },
 
+      yoYaKu: {
+        btmVisible: false,
+        confirmDialogVisible: false,
+        preBillId: null,
+        customerId: null,
+        customer_yoYaKu_Place: [],
+        customer_dest_Place: [],
+        markerA: null,
+        markerB: null
+      },
+
+      yoYaKuConfirmVisible: false,
+
       bill: {
         id: "",
         timeStart: null,
@@ -361,7 +391,7 @@ export default {
         status: ""
       },
 
-      Image2: false
+      Image2: false  // 车辆照片
     }
   },
 
@@ -600,39 +630,73 @@ export default {
       console.log(JSON.stringify(obj, null, 2));
     },
 
+    processYoYaKu() {
+      this.yoYaKu.confirmDialogVisible = true
+    },
+
     handle_msg(env) {
       if (this.notNil(env.data)) {
         console.log(env.data)
         const obj = JSON.parse(env.data)
-        if (this.notNil(obj["preBillId"])) {
-          this.preBillId = obj["preBillId"]
-        }
-        if (this.notNil(obj["customerId"])) {
-          this.customerId = obj["customerId"]
-        }
-        if (this.notNil(obj["lng"])) {
-          this.cat.lng = obj["lng"]
-        }
-        if (this.notNil(obj["lat"])) {
-          this.cat.lat = obj["lat"]
-        }
-        if (this.notNil(obj["lng2"])) {
-          this.cat.lng2 = obj["lng2"]
-        }
-        if (this.notNil(obj["lat2"])) {
-          if (this.notNil(this.customer_marker)) {
-            this.map.remove(this.customer_marker)
+        const isYoYaKu =( this.notNil(obj["isYoYaKu"]) && (obj["isYoYaKu"] === true))
+        if (isYoYaKu) {
+          let OP = obj["dateTime"]
+          this.yoYaKu.btmVisible = true
+          this.yoYaKu.customer_yoYaKu_Place[0] = obj["lng"]
+          this.yoYaKu.customer_yoYaKu_Place[1] = obj["lat"]
+          this.yoYaKu.customer_dest_Place[0] = obj["lng2"]
+          this.yoYaKu.customer_dest_Place[1] = obj["lat2"]
+          if (this.notNil(this.yoYaKu.markerA)) {
+            this.map.remove(this.yoYaKu.markerA)
           }
 
-          if (this.notNil(this.destination_marker)) {
-            this.map.remove(this.destination_marker)
+          if (this.notNil(this.yoYaKu.markerB)) {
+            this.map.remove(this.yoYaKu.markerB)
           }
-          this.cat.lat2 = obj["lat2"]
-          this.requestProcessing = true
-          this.$message("发现新的乘客打车请求")
-          this.setCustomerDot(this.cat.lng, this.cat.lat)
-          this.setDestinationDot(this.cat.lng2, this.cat.lat2)
-          this.map.setFitView();
+          this.$message("发现新的预约单请求")
+          this.yoYaKu.markerA = new AMap.Marker({
+            position: this.yoYaKu.customer_yoYaKu_Place,
+            title: "乘客上车点",
+          })
+          this.map.add(this.yoYaKu.markerA)
+
+          this.yoYaKu.markerB = new AMap.Marker({
+            position: this.yoYaKu.customer_dest_Place,
+            title: "乘客上车点",
+          })
+          this.map.add(this.yoYaKu.markerB)
+
+        } else {
+          if (this.notNil(obj["preBillId"])) {
+            this.preBillId = obj["preBillId"]
+          }
+          if (this.notNil(obj["customerId"])) {
+            this.customerId = obj["customerId"]
+          }
+          if (this.notNil(obj["lng"])) {
+            this.cat.lng = obj["lng"]
+          }
+          if (this.notNil(obj["lat"])) {
+            this.cat.lat = obj["lat"]
+          }
+          if (this.notNil(obj["lng2"])) {
+            this.cat.lng2 = obj["lng2"]
+          }
+          if (this.notNil(obj["lat2"])) {
+            if (this.notNil(this.customer_marker)) {
+              this.map.remove(this.customer_marker)
+            }
+
+            if (this.notNil(this.destination_marker)) {
+              this.map.remove(this.destination_marker)
+            }
+            this.cat.lat2 = obj["lat2"]
+            this.requestProcessing = true
+            this.$message("发现新的乘客打车请求")
+            this.setCustomerDot(this.cat.lng, this.cat.lat)
+            this.setDestinationDot(this.cat.lng2, this.cat.lat2)
+            this.map.setFitView();
+          }
         }
       }
     },
@@ -770,6 +834,13 @@ export default {
         title: '我的位置'
       });
       this.map.add(this.now_status.my_dot_marker);
+    },
+
+    cancelYoYaKuBill() {
+
+    },
+    handleYoYaKuBill() {
+
     },
 
 
@@ -964,5 +1035,7 @@ export default {
 body, html {
   height: 100%;
 }
+
+
 
 </style>

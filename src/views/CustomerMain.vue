@@ -137,6 +137,48 @@
       <el-button @click="give_score"> 确定</el-button>
     </el-dialog>
 
+    <el-dialog title="在此选择上车时间" :visible.sync="selectedYoYaKuTime_visible" width="90%" fullscreen
+               style="box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 30px;margin: 18%;">
+      <div>
+        <div class="block">
+          <el-date-picker
+              v-model="selectedYoYaKuTime"
+              type="datetime"
+              placeholder="选择日期时间"
+              align="right"
+              :picker-options="pickerOptions">
+          </el-date-picker>
+        </div>
+        <br/><br/>
+        <div>
+          <el-button @click="start_yoYaKu"> 确定</el-button>
+        </div>
+      </div>
+    </el-dialog>
+
+
+    <el-dialog title="已成功找到司机" :visible.sync="now_status.driver.infoVisible" width="90%" fullscreen
+               style="box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 30px;margin: 12%;">
+      <div>
+        <div v-if="now_status.driver.haveImg">
+          <div style="align-items: center; text-align: center">
+            <div class="grid-content bg-purple">
+              <avatar :src="now_status.driver.img" :size="100"></avatar>
+            </div>
+          </div>
+        </div>
+        <el-descriptions class="margin-top" :column="2">
+          <el-descriptions-item label="ID "> {{ this.now_status.driver.id }}</el-descriptions-item>
+          <el-descriptions-item label="昵称"> {{ this.now_status.driver.name }}</el-descriptions-item>
+          <el-descriptions-item label="电话"> {{ this.now_status.driver.tel }}</el-descriptions-item>
+          <el-descriptions-item label="邮箱"> {{ this.now_status.driver.mail }}</el-descriptions-item>
+        </el-descriptions>
+        <div>
+          <el-button @click="() => {}"> 确定</el-button>
+        </div>
+      </div>
+    </el-dialog>
+
   </div>
 </template>
 
@@ -207,7 +249,10 @@ export default {
           speed: 0.01,
           carId: "",
           score: 0,
-          runtimes: 0
+          runtimes: 0,
+          haveImg: false,
+          img: "",
+          infoVisible: false
         },
         have_aim: false,
         aim_place: [],
@@ -235,6 +280,30 @@ export default {
       },
 
       selectedYoYaKuTime: null,
+      selectedYoYaKuTime_visible: false,
+
+      pickerOptions: {
+        shortcuts: [{
+          text: '今天',
+          onClick(picker) {
+            picker.$emit('pick', new Date());
+          }
+        }, {
+          text: '明天',
+          onClick(picker) {
+            const date = new Date();
+            date.setTime(date.getTime() + 3600 * 1000 * 24);
+            picker.$emit('pick', date);
+          }
+        }, {
+          text: '一周后',
+          onClick(picker) {
+            const date = new Date();
+            date.setTime(date.getTime() + 3600 * 1000 * 24 * 7);
+            picker.$emit('pick', date);
+          }
+        }]
+      },
     }
   },
 
@@ -254,13 +323,6 @@ export default {
 
 
   methods: {
-    handleOpen(key, keyPath) {
-      console.log(key, keyPath);
-    },
-    handleClose(key, keyPath) {
-      console.log(key, keyPath);
-    },
-
     toHere() {
       this.axiosGet_Header("running/query4new-travel", "POST",
           {
@@ -276,8 +338,36 @@ export default {
       this.$message("正在为您寻找最近的司机......")
     },
 
-    YO_YAKU() {
 
+    start_yoYaKu() {
+      this.axiosGet_Header("running/query4new-travel", "POST",
+          {
+            customerId: this.id_,
+            lng: this.now_status.my_place[0],
+            lat: this.now_status.my_place[1],
+            lng2: this.target_place[0],
+            lat2: this.target_place[1],
+            //  isYoYaKu, Optional<String> dateTime
+            isYoYaKu: true,
+            dateTime: this.selectedYoYaKuTime
+          }, {},
+          (res) => {
+            this.selectedYoYaKuTime_visible = false
+            if (res.status === 200)
+              this.$message("正在为您寻找最合适的司机......")
+            else {
+              this.$message({
+                message: "服务器发生未知错误",
+                type: "error",
+                showClose: true
+              })
+            }
+          }
+      );
+    },
+
+    YO_YAKU() {
+      this.selectedYoYaKuTime_visible = true
     },
     changeImage() {
       this.innerVisible = true
@@ -561,12 +651,16 @@ export default {
           document.addEventListener('keydown', this.handleKeyDown)
         }
         if (this.notNil(obj["ID"])) {
-          this.now_status.driver.id = obj["ID"]
-          this.exe = setInterval(() => {
-            if (this.notNil(this.map)) {
-              this.map.setFitView()
-            }
-          }, 2000)
+          if (this.notNil(obj["YYK_GOT"])) {
+
+          } else {
+            this.now_status.driver.id = obj["ID"]
+            this.exe = setInterval(() => {
+              if (this.notNil(this.map)) {
+                this.map.setFitView()
+              }
+            }, 2000)
+          }
         }
         if (this.notNil(obj["ID"])) {
           this.$message({
@@ -587,6 +681,16 @@ export default {
             console.log(this.now_status.driver)
           })
         }
+
+        if (this.notNil(obj["YYK_GOT"])) {
+          setTimeout(() => {
+            this.$message({
+              showClose: true,
+              message: "请在预约时间按时上线",
+              type: "success"
+            })
+          }, 200)
+        }
         if (this.notNil(obj["lng"])) {
           this.now_status.driver_place[0] = obj["lng"]
         }
@@ -594,10 +698,10 @@ export default {
         if (this.notNil(obj["lat"])) {
           this.now_status.driver_place[1] = obj["lat"]
           this.upDateDriverPlace()
+          console.log("现在, 司机的位置: ")
+          console.log(this.now_status.driver_place)
         }
 
-        console.log("现在, 司机的位置: ")
-        console.log(this.now_status.driver_place)
 
         if (this.on_car) {
           if (!(this.now_status.my_dot_marker === null || this.now_status.my_dot_marker === undefined)) {
