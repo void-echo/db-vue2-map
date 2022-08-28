@@ -173,13 +173,13 @@
             </div>
           </div>
           <el-descriptions class="margin-top" :column="2">
-<!--            id: "",
-          use_start_time: "",
-          band: "",
-          type: "",
-          max_speed: 0,
-          haveImg: false,
-          img: ""-->
+            <!--            id: "",
+                      use_start_time: "",
+                      band: "",
+                      type: "",
+                      max_speed: 0,
+                      haveImg: false,
+                      img: ""-->
             <el-descriptions-item label="用户名"> {{ this.driver.hisCar.id }}</el-descriptions-item>
             <el-descriptions-item label="开始使用时间"> {{ this.driver.hisCar.use_start_time }}</el-descriptions-item>
             <el-descriptions-item label="车型"> {{ this.driver.hisCar.type }}</el-descriptions-item>
@@ -187,7 +187,7 @@
           </el-descriptions>
           <div>
             <el-button v-if="!driver.hisCar.haveImg" @click="changeImage2"> 添加头像</el-button>
-            <el-button v-else @click="changeImage2"> 修改车辆照片 </el-button>
+            <el-button v-else @click="changeImage2"> 修改车辆照片</el-button>
             <el-button> 修改</el-button>
             <el-button @click="layOut_.CarVisible = false"> 关闭</el-button>
           </div>
@@ -377,7 +377,9 @@ export default {
         customer_yoYaKu_Place: [],
         customer_dest_Place: [],
         markerA: null,
-        markerB: null
+        markerB: null,
+        jiGenString: null,
+        timeObject: null
       },
 
       yoYaKuConfirmVisible: false,
@@ -638,10 +640,13 @@ export default {
       if (this.notNil(env.data)) {
         console.log(env.data)
         const obj = JSON.parse(env.data)
-        const isYoYaKu =( this.notNil(obj["isYoYaKu"]) && (obj["isYoYaKu"] === true))
+        const isYoYaKu = (this.notNil(obj["isYoYaKu"]) && (obj["isYoYaKu"] === true))
         if (isYoYaKu) {
           let OP = obj["dateTime"]
           this.yoYaKu.btmVisible = true
+          this.yoYaKu.preBillId = obj["preBillId"]
+          this.yoYaKu.customerId = obj["customerId"]
+          this.yoYaKu.jiGenString = OP
           this.yoYaKu.customer_yoYaKu_Place[0] = obj["lng"]
           this.yoYaKu.customer_yoYaKu_Place[1] = obj["lat"]
           this.yoYaKu.customer_dest_Place[0] = obj["lng2"]
@@ -665,6 +670,9 @@ export default {
             title: "乘客上车点",
           })
           this.map.add(this.yoYaKu.markerB)
+          setTimeout(() => {
+            this.map.setFitView()
+          }, 100)
 
         } else {
           if (this.notNil(obj["preBillId"])) {
@@ -691,11 +699,25 @@ export default {
               this.map.remove(this.destination_marker)
             }
             this.cat.lat2 = obj["lat2"]
-            this.requestProcessing = true
-            this.$message("发现新的乘客打车请求")
-            this.setCustomerDot(this.cat.lng, this.cat.lat)
-            this.setDestinationDot(this.cat.lng2, this.cat.lat2)
-            this.map.setFitView();
+            if (this.notNil(obj["goOnReservedBill"]) && obj["goOnReservedBill"] === true) {
+              this.$message({
+                message: "即将继续已预约的订单",
+                type: "success",
+                showClose: true
+              })
+              this.catchNewBill()
+
+              this.setCustomerDot(this.cat.lng, this.cat.lat)
+              this.setDestinationDot(this.cat.lng2, this.cat.lat2)
+              this.map.setFitView();
+
+            } else {
+              this.requestProcessing = true
+              this.$message("发现新的乘客打车请求")
+              this.setCustomerDot(this.cat.lng, this.cat.lat)
+              this.setDestinationDot(this.cat.lng2, this.cat.lat2)
+              this.map.setFitView();
+            }
           }
         }
       }
@@ -837,10 +859,48 @@ export default {
     },
 
     cancelYoYaKuBill() {
-
+      this.map.remove(this.yoYaKu.markerB);
+      this.yoYaKu.markerB = null
+      this.map.remove(this.yoYaKu.markerA)
+      this.yoYaKu.markerA = null
+      this.yoYaKu.btmVisible = false
+      this.yoYaKu.confirmDialogVisible = false
+      this.map.setFitView()
     },
-    handleYoYaKuBill() {
 
+    // @RequestMapping("handle-YYK-bill-by-driver")
+    // public synchronized String handleYYKBill(String preBillId, String customerId, String driverId) {
+    handleYoYaKuBill() {
+      this.axiosGet_Header("running/handle-YYK-bill-by-driver", "GET", {
+        preBillId: this.yoYaKu.preBillId,
+        customerId: this.yoYaKu.customerId,
+        driverId: this.id_
+      }, {}, (res) => {
+        if (res.status === 200) {
+          this.$message({
+            type: "success",
+            message: "已成功接到本次预约单",
+            showClose: true
+          })
+
+          setTimeout(() => {
+            this.$message({
+              type: "success",
+              message: "届时请保持在线, 以便乘客联系.",
+              showClose: true
+            })
+          }, 200)
+          setTimeout(() => {
+            this.cancelYoYaKuBill()
+          }, 300)
+        } else {
+          this.$message({
+            type: "error",
+            message: "未完成接单, 服务器发生内部错误.",
+            showClose: true
+          })
+        }
+      })
     },
 
 
@@ -1035,7 +1095,6 @@ export default {
 body, html {
   height: 100%;
 }
-
 
 
 </style>

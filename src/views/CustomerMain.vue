@@ -206,6 +206,9 @@ export default {
 
   data() {
     return {
+      yyk: {
+        reservedBillId: null,
+      },
       allBillsOfMe: null,
       innerVisible: false,
       moneyToPay: "",
@@ -339,6 +342,7 @@ export default {
     },
 
 
+    // 开始预约
     start_yoYaKu() {
       this.axiosGet_Header("running/query4new-travel", "POST",
           {
@@ -347,7 +351,6 @@ export default {
             lat: this.now_status.my_place[1],
             lng2: this.target_place[0],
             lat2: this.target_place[1],
-            //  isYoYaKu, Optional<String> dateTime
             isYoYaKu: true,
             dateTime: this.selectedYoYaKuTime
           }, {},
@@ -364,6 +367,10 @@ export default {
             }
           }
       );
+
+      setTimeout(() => {
+        this.goOnReservedBill()
+      }, 12000)
     },
 
     YO_YAKU() {
@@ -553,6 +560,18 @@ export default {
       this.map.add(this.now_status.my_dot_marker);
     },
 
+    goOnReservedBill() {
+      this.axiosGet_Header("running/go-on-reserved-bill", "GET", {
+        billId: this.yyk.reservedBillId
+      }, {}, () => {
+
+      })
+
+      this.$message({
+        message: "正在寻找已经预约了的司机"
+      })
+    },
+
     bindClickEvent() {
       this.map.on('click', this.clickedMap)
     },
@@ -650,9 +669,23 @@ export default {
           this.clearDriverInfo()
           document.addEventListener('keydown', this.handleKeyDown)
         }
+        if (this.notNil(obj["reservedBillId"])) {
+          this.yyk.reservedBillId = obj["reservedBillId"]
+        }
         if (this.notNil(obj["ID"])) {
           if (this.notNil(obj["YYK_GOT"])) {
-
+            this.$message({
+              message: "已有司机: " + obj["ID"] + " 接单",
+              type: "success",
+              showClose: true
+            })
+            setTimeout(() => {
+              this.$message({
+                type: "success",
+                message: "届时请保持在线, 以便乘客联系.",
+                showClose: true
+              })
+            }, 250)
           } else {
             this.now_status.driver.id = obj["ID"]
             this.exe = setInterval(() => {
@@ -663,9 +696,10 @@ export default {
           }
         }
         if (this.notNil(obj["ID"])) {
+          let _msg = (this.notNil(obj["yyk"]) && obj["yyk"] === true) ? "成功找到预约了的司机" : "成功找到司机: "
           this.$message({
             showClose: true,
-            message: "成功找到司机: " + obj["ID"],
+            message: _msg + obj["ID"],
             type: "success"
           })
           this.axiosGet_Header("running/driverInfo", "GET", {
@@ -728,10 +762,11 @@ export default {
         score_: this.my_score
       }, {}, () => {
         this.$message({
-          message: "支付并打分成功",
+          message: "余额充足, 支付成功",
           type: "success",
           showClose: true
         })
+        this.give_score_dialog_visible = false
       })
     },
 
