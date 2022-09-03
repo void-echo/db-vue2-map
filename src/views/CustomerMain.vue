@@ -40,24 +40,19 @@
           <br/><br/>
           <el-card shadow="always" style=" border-radius: 30px">
             <el-row>
-              <el-col :span="6">
+              <el-col :span="8">
                 <div class="grid-content bg-purple">
-                  <el-button @click="bindClickEvent"> 选取点</el-button>
+                  <el-button type="primary" round @click="openGPS">GPS</el-button>
                 </div>
               </el-col>
-              <el-col :span="6">
+              <el-col :span="8">
                 <div class="grid-content bg-purple">
-                  <el-button @click="toHere"> 到这儿去</el-button>
+                  <el-button type="primary" round @click="toHere"> 到这儿去</el-button>
                 </div>
               </el-col>
-              <el-col :span="6">
+              <el-col :span="8">
                 <div class="grid-content bg-purple">
-                  <el-button @click="YO_YAKU"> 发起预约单</el-button>
-                </div>
-              </el-col>
-              <el-col :span="6">
-                <div class="grid-content bg-purple">
-                  <el-button @click="openGPS">GPS</el-button>
+                  <el-button type="primary" round @click="YO_YAKU"> 发起预约单</el-button>
                 </div>
               </el-col>
             </el-row>
@@ -77,20 +72,51 @@
                style="box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 30px;margin: 5%;">
       <div>
         <el-table
-            :data="allBillsOfMe"
+            :data="visibleAllBillsOfMe"
             height="500"
             border
+            :default-sort="{prop: 'id', order: 'descending'}"
             style="width: 100%">
-          <el-table-column prop="id" label="编号" width="180"></el-table-column>
-          <el-table-column prop="time" label="姓名" width="180"></el-table-column>
-          <el-table-column prop="money" label="金额"></el-table-column>
-          <el-table-column prop="score" label="评分"></el-table-column>
-          <el-table-column prop="driverId" label="司机用户名"></el-table-column>
-          <el-table-column prop="customerId" label="顾客用户名"></el-table-column>
-          <el-table-column prop="status" label="状态"></el-table-column>
-          <el-table-column prop="duration" label="持续时间"></el-table-column>
-          <el-table-column prop="fromPlace" label="从"></el-table-column>
-          <el-table-column prop="toPlace" label="到"></el-table-column>
+          <el-table-column sortable prop="id" label="编号" width="180">
+
+          </el-table-column>
+          <el-table-column sortable prop="time" label="时间" width="180">
+
+          </el-table-column>
+          <el-table-column sortable prop="money" label="金额">
+
+          </el-table-column>
+          <el-table-column sortable prop="score" label="评分">
+
+          </el-table-column>
+          <el-table-column sortable prop="driverId" label="司机用户名">
+
+          </el-table-column>
+          <el-table-column sortable prop="customerId" label="顾客用户名">
+
+          </el-table-column>
+          <el-table-column sortable prop="status" label="状态">
+
+          </el-table-column>
+          <el-table-column sortable prop="duration" label="持续时间">
+
+          </el-table-column>
+          <el-table-column sortable prop="fromPlace" label="从">
+
+          </el-table-column>
+          <el-table-column sortable prop="toPlace" label="到">
+
+          </el-table-column>
+          <el-table-column sortable label="操作">
+            <template v-slot="scope">
+              <el-button round @click="raiseNewDispute(scope.$index, scope.row)" v-if="scope.row['status'] !== '有争议'">
+                投诉
+              </el-button>
+              <el-button type="primary" round @click="raiseNewDispute(scope.$index, scope.row)" v-else>
+                取消投诉
+              </el-button>
+            </template>
+          </el-table-column>
         </el-table>
       </div>
     </el-dialog>
@@ -206,10 +232,34 @@ export default {
 
   data() {
     return {
+      raiseDisputeType: {
+        options:  [{
+          value: '选项1',
+          label: '金额问题'
+        }, {
+          value: '选项2',
+          label: '安全问题',
+        }, {
+          value: '选项3',
+          label: '其他问题'
+        }],
+        value: ''
+      },
+      lookUpTable: {
+        "HANGING": "已发起",
+        "WAITING": "等待中",
+        "GOING": "进行中",
+        "NOT_PAID": "未支付",
+        "NOT_SCORED": "未评分",
+        "FINISHED": "已完成",
+        "ON_DISPUTE": "有争议",
+        "ARCHIVED": "已归档"
+      },
       yyk: {
         reservedBillId: null,
       },
       allBillsOfMe: null,
+      visibleAllBillsOfMe: null,
       innerVisible: false,
       moneyToPay: "",
       billId: "",
@@ -233,6 +283,7 @@ export default {
         haveImg: false,
         image: "",
       },
+      geocoder: null,
       map: null,
       person_speed: 0.01,
       target_place: [],
@@ -383,7 +434,7 @@ export default {
       AMapLoader.load({
         key: "ca1beeb0abaeca2b3c3ab0a5ce115a6d",             // 申请好的Web端开发者Key，首次调用 load 时必填
         version: "2.0",      // 指定要加载的 JSAPI 的版本，缺省时默认为 1.4.15
-        plugins: ['AMap.Driving', 'AMap.ToolBar', 'AMap.Geolocation', 'AMap.Scale'],
+        plugins: ['AMap.Driving', 'AMap.ToolBar', 'AMap.Geolocation', 'AMap.Scale', 'AMap.Geocoder'],
         // 需要使用的的插件列表，如比例尺'AMap.Scale等
       }).then((AMap_) => {
         this.map = new AMap_.Map("mapContainer", {  //设置地图容器id
@@ -396,6 +447,11 @@ export default {
           var toolbar = new AMap.ToolBar();
           this.map.addControl(toolbar);
         });
+
+        AMap.plugin('AMap.Geocoder', () => {
+          var geocoder = new AMap.Geocoder({})
+          this.geocoder = geocoder
+        })
 
         this.geoVar = new AMap.Geolocation({
           // 是否使用高精度定位，默认：true
@@ -458,6 +514,22 @@ export default {
       // 定位出错
     },
 
+    raiseNewDispute(a, b) {
+      this.united_print(b)
+      if (!(b["status"] === "有争议")) {
+        //  @RequestMapping("raise-dispute")
+        // public ResponseEntity<String> raiseDispute(String billId, String type, String contents) {
+
+
+        // this.axiosGet_Config("running/raise-dispute", "GET", {
+        //   billId: b["id"],
+        //   type: ""
+        // }, {}, () => {
+        //
+        // })
+      }
+    },
+
     SIDE_DING_DAN() {
       this.getAllBillsOfMe()
     },
@@ -481,7 +553,9 @@ export default {
         customerId: this.id_
       }, {}, (res) => {
         if (res.status === 200) {
+          this.united_print(res.data)
           this.allBillsOfMe = res.data;
+          this.updateAllBillsOfMe2Visible()
           this.layOut_.DingDanVisible = true
         }
       })
@@ -525,33 +599,6 @@ export default {
     notNil(obj) {
       return !(obj === null || obj === undefined)
     },
-    clickedMap(event_) {
-      if (this.notNil(this.infoWindow)) {
-        this.infoWindow.close()
-      }
-      this.target_place = [event_.lnglat.getLng(), event_.lnglat.getLat()];
-      var marker = new AMap.Marker({
-        position: this.target_place,
-        title: '北京'
-      });
-      if (!(this.target_place_marker === null || this.target_place_marker === undefined)) {
-        this.map.remove(this.target_place_marker)
-      }
-
-      this.add_banner_on(marker);
-      this.map.add(marker);
-      this.target_place_marker = marker
-    },
-    add_banner_on(marker) {
-      marker.on('click', () => {
-        var content = [this.$refs.infoCard];
-        this.infoWindow = new AMap.InfoWindow({
-          content: content[0] //传入 dom 对象，或者 html 字符串
-        });
-        this.infoWindow.open(this.map, this.target_place);
-        console.log(content[0])
-      })
-    },
     setMyDot() {
       this.now_status.my_dot_marker = new AMap.Marker({
         position: this.now_status.my_place,   // 经纬度对象，也可以是经纬度构成的一维数组[116.39, 39.9]
@@ -588,6 +635,19 @@ export default {
         this.my_socket.socket.send("ID: " + this.id_)
 
       }
+    },
+
+    getPlaceName_(PlaceList) {
+      geocoder.getAddress(PlaceList, (status, result) => {
+        if (status === 'complete' && result.info === 'OK') {
+          return result
+        }
+      })
+    },
+
+
+    getPlaceName(lng, lat) {
+
     },
 
 
@@ -768,6 +828,46 @@ export default {
         })
         this.give_score_dialog_visible = false
       })
+    },
+
+    updateAllBillsOfMe2Visible() {
+      this.visibleAllBillsOfMe = this.allBillsOfMe
+      this.visibleAllBillsOfMe.forEach((el) => {
+        // for each begin
+        this.geocoder.getAddress(JSON.parse(el["fromPlace"]), (status, result) => {
+          if (status === 'complete' && result.regeocode) {
+            el["fromPlace"] = result.regeocode.formattedAddress
+          } else {
+            console.log('根据经纬度查询地址失败')
+          }
+        });
+
+        this.geocoder.getAddress(JSON.parse(el["toPlace"]), (status, result) => {
+          if (status === 'complete' && result.regeocode) {
+            el["toPlace"] = result.regeocode.formattedAddress
+          } else {
+            console.log('根据经纬度查询地址失败')
+          }
+        });
+        el["status"] = this.lookUpTable[el["status"]]
+        // TODO HERE: TIME FORMAT
+        // for each end
+      })
+      /*
+      *   {
+    "id": "2022-08-24 23:23:43.668void-echo",
+    "time": "2022-08-24T15:23:44.000+00:00",
+    "money": null,
+    "score": null,
+    "driverId": "driver_123",
+    "customerId": "void-echo",
+    "status": "GOING",
+    "duration": null,
+    "fromPlace": "[105.592725, 37.076636]",
+    "toPlace": "[107.654650, 33.637012]"
+  },
+      * */
+
     },
 
 

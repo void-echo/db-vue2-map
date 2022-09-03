@@ -101,17 +101,18 @@
             :data="allBillsOfMe"
             height="500"
             border
+            :default-sort = "{prop: 'id', order: 'descending'}"
             style="width: 100%">
-          <el-table-column prop="id" label="编号" width="180"></el-table-column>
-          <el-table-column prop="time" label="姓名" width="180"></el-table-column>
-          <el-table-column prop="money" label="金额"></el-table-column>
-          <el-table-column prop="score" label="评分"></el-table-column>
-          <el-table-column prop="driverId" label="司机用户名"></el-table-column>
-          <el-table-column prop="customerId" label="顾客用户名"></el-table-column>
-          <el-table-column prop="status" label="状态"></el-table-column>
-          <el-table-column prop="duration" label="持续时间"></el-table-column>
-          <el-table-column prop="fromPlace" label="从"></el-table-column>
-          <el-table-column prop="toPlace" label="到"></el-table-column>
+          <el-table-column sortable prop="id" label="编号" width="180"></el-table-column>
+          <el-table-column sortable prop="time" label="姓名" width="180"></el-table-column>
+          <el-table-column sortable prop="money" label="金额"></el-table-column>
+          <el-table-column sortable prop="score" label="评分"></el-table-column>
+          <el-table-column sortable prop="driverId" label="司机用户名"></el-table-column>
+          <el-table-column sortable prop="customerId" label="顾客用户名"></el-table-column>
+          <el-table-column sortable prop="status" label="状态"></el-table-column>
+          <el-table-column sortable prop="duration" label="持续时间"></el-table-column>
+          <el-table-column sortable prop="fromPlace" label="从"></el-table-column>
+          <el-table-column sortable prop="toPlace" label="到"></el-table-column>
         </el-table>
       </div>
     </el-dialog>
