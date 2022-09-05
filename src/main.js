@@ -6,8 +6,9 @@ import router from './router'
 import VueKinesis from 'vue-kinesis'
 import VueFirework from 'vue-firework'
 import VueTypedJs from 'vue-typed-js'
+import Vcode from "vue-puzzle-vcode";
 
-
+Vue.use(Vcode)
 
 Vue.use(VueTypedJs)
 

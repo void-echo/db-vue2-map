@@ -92,9 +92,6 @@
           <el-table-column sortable prop="driverId" label="司机用户名">
 
           </el-table-column>
-          <el-table-column sortable prop="customerId" label="顾客用户名">
-
-          </el-table-column>
           <el-table-column sortable prop="status" label="状态">
 
           </el-table-column>
@@ -109,16 +106,75 @@
           </el-table-column>
           <el-table-column sortable label="操作">
             <template v-slot="scope">
-              <el-button round @click="raiseNewDispute(scope.$index, scope.row)" v-if="scope.row['status'] !== '有争议'">
-                投诉
+              <el-button round @click="raiseNewDispute(scope.$index, scope.row)"
+                         v-if="scope.row['status'] !== '有争议'">
+                申请投诉
               </el-button>
-              <el-button type="primary" round @click="raiseNewDispute(scope.$index, scope.row)" v-else>
-                取消投诉
+              <el-button @click="viewDisputeProcess(scope.$index, scope.row)" type="primary" round v-else>
+                查询进度
               </el-button>
             </template>
           </el-table-column>
         </el-table>
       </div>
+
+      <el-dialog title="投诉进度" :visible.sync="dispute.checkingProcess" append-to-body width="90%" fullscreen
+                 style="box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 30px;margin: 16%;">
+        <div>
+          <el-descriptions class="margin-top" :column="1">
+            <el-descriptions-item label="投诉类型"> {{ this.dispute.check.type }}</el-descriptions-item>
+            <el-descriptions-item label="内容"> {{ this.dispute.check.contents }}</el-descriptions-item>
+            <el-descriptions-item label="处理结果"> {{ this.dispute.check.checkResult }}</el-descriptions-item>
+          </el-descriptions>
+        </div>
+        <span slot="footer" class="dialog-footer">
+          <el-button @click="dispute.cancelConfirm = true"> 取消投诉 </el-button>
+        </span>
+
+        <el-dialog title="确认取消本次投诉吗?" :visible.sync="dispute.cancelConfirm" append-to-body width="90%" fullscreen
+                   style="box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 30px;margin: 20%;">
+          <el-button @click="cancelDispute">确认</el-button>
+        </el-dialog>
+      </el-dialog>
+
+
+      <el-dialog title="投诉申请" :visible.sync="disputeRaisingVisible" append-to-body width="90%" fullscreen
+                 style="box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 30px;margin: 10%;">
+        <div>
+          若司机存在违规行为, 我们将依法采取措施进行处罚并补偿乘客.
+        </div>
+        <div>
+          <div>类型</div>
+          <div>
+            <span>
+            <el-select v-model="raiseDisputeType.value" placeholder="请选择">
+              <el-option v-for="item in raiseDisputeType.options"
+                         :key="item.value" :label="item.label" :value="item.value">
+
+              </el-option>
+            </el-select>
+          </span>
+          </div>
+          <div>
+            <br/><br/>
+            详情
+          </div>
+          <div>
+            <el-input
+                type="textarea"
+                placeholder="请输入内容"
+                v-model="dispute.contents"
+                maxlength="100"
+                show-word-limit
+            >
+            </el-input>
+          </div>
+        </div>
+        <span slot="footer" class="dialog-footer">
+          <el-button @click="disputeRaisingVisible = false">取 消</el-button>
+          <el-button type="primary" @click="_raiseNewDispute">确 定</el-button>
+        </span>
+      </el-dialog>
     </el-dialog>
 
     <el-dialog title="余额" :visible.sync="layOut_.YuEVisible"
@@ -232,15 +288,30 @@ export default {
 
   data() {
     return {
+      dispute: {
+        billId: '',
+        type: '',
+        contents: '',
+        checkingProcess: false,
+        cancelConfirm: false,
+        check: {
+          billId: '',
+          type: '',
+          contents: '',
+          checkResult: '',
+
+        }
+      },
+      disputeRaisingVisible: false,
       raiseDisputeType: {
-        options:  [{
-          value: '选项1',
+        options: [{
+          value: '金额问题',
           label: '金额问题'
         }, {
-          value: '选项2',
+          value: '安全问题',
           label: '安全问题',
         }, {
-          value: '选项3',
+          value: '其他问题',
           label: '其他问题'
         }],
         value: ''
@@ -466,6 +537,7 @@ export default {
           position: 'RB'
         })
         this.map.addControl(new AMap.Scale())
+        this.bindClickEvent()
       }).catch(e => {
         console.log(e);
       });
@@ -511,22 +583,71 @@ export default {
     onError(data) {
       console.log("定位失败，定位信息：")
       console.log(data)
-      // 定位出错
+    },
+
+    viewDisputeProcess(a, b) {
+      this.dispute.check.billId = b["id"]
+      this.axiosGet_Config("dispute/get-1-by-bill-id", "GET", {
+        billId: b["id"]
+      }, {}, (res) => {
+        if (res.status === 200) {
+          let dt = res.data
+          this.united_print(dt)
+          this.dispute.check.type = dt["type"]
+          this.dispute.check.contents = dt["contents"]
+          if (dt["judgeResult"] !== null)
+            this.dispute.check.checkResult = dt["judgeResult"]
+          else this.dispute.check.checkResult = "管理员尚未处理"
+          this.dispute.checkingProcess = true
+        }
+      })
+    },
+
+    _raiseNewDispute() {
+      this.axiosGet_Config("running/raise-dispute", "GET", {
+        billId: this.dispute.billId,
+        type: this.raiseDisputeType.value,
+        contents: this.dispute.contents
+      }, {}, (res) => {
+        console.log(res)
+        if (res.status === 500) {
+          this.serverErr()
+        } else if (res.status === 200) {
+          this.successMsg("投诉成功")
+          this.disputeRaisingVisible = false
+          this.visibleAllBillsOfMe.forEach((row) => {
+            if (row["id"] === this.dispute.billId) {
+              row["status"] = "有争议"
+            }
+          })
+        }
+      })
+    },
+
+    errorMsg(msg) {
+      this.$message({
+        message: msg,
+        showClose: true,
+        type: "error"
+      })
+    },
+
+    serverErr() {
+      this.errorMsg("服务器内部错误, 请稍后重试")
+    },
+
+    successMsg(msg) {
+      this.$message({
+        message: msg,
+        showClose: true,
+        type: "success"
+      })
     },
 
     raiseNewDispute(a, b) {
-      this.united_print(b)
       if (!(b["status"] === "有争议")) {
-        //  @RequestMapping("raise-dispute")
-        // public ResponseEntity<String> raiseDispute(String billId, String type, String contents) {
-
-
-        // this.axiosGet_Config("running/raise-dispute", "GET", {
-        //   billId: b["id"],
-        //   type: ""
-        // }, {}, () => {
-        //
-        // })
+        this.dispute.billId = b["id"]
+        this.disputeRaisingVisible = true
       }
     },
 
@@ -623,6 +744,20 @@ export default {
       this.map.on('click', this.clickedMap)
     },
 
+    clickedMap(event_) {
+      this.target_place = [event_.lnglat.getLng(), event_.lnglat.getLat()];
+      var marker = new AMap.Marker({
+        position: this.target_place,
+        title: '目的地'
+      });
+      if (!(this.target_place_marker === null || this.target_place_marker === undefined)) {
+        this.map.remove(this.target_place_marker)
+      }
+
+      this.map.add(marker);
+      this.target_place_marker = marker
+    },
+
     init_socket() {
       if (this.notNil(this.my_socket.socket)) {
         this.my_socket.socket.close()
@@ -706,6 +841,7 @@ export default {
         console.log(obj)
         if (this.notNil(obj["CAUGHT"])) {
           this.on_car = obj["CAUGHT"];
+          this.successMsg("您已上车")
           console.log("CAUGHT 更新: on_car = " + this.on_car)
         }
         if (this.notNil(obj["money"])) {
@@ -830,6 +966,20 @@ export default {
       })
     },
 
+    cancelDispute() {
+      this.axiosGet_Config("running/cancel-dispute", "GET", {
+        billId: this.dispute.check.billId
+      }, {}, (res)=>{
+        if ((res.status === 200) && (res.data === "success")) {
+          this.successMsg("取消投诉成功.")
+        } else if (res.status === 500) {
+          this.serverErr()
+        } else {
+          this.errorMsg(res.data)
+        }
+      })
+    },
+
     updateAllBillsOfMe2Visible() {
       this.visibleAllBillsOfMe = this.allBillsOfMe
       this.visibleAllBillsOfMe.forEach((el) => {
@@ -850,6 +1000,9 @@ export default {
           }
         });
         el["status"] = this.lookUpTable[el["status"]]
+        let str_ = el["time"]
+        str_ = str_.replace('.000+00:00', '')
+        el["time"] = str_
         // TODO HERE: TIME FORMAT
         // for each end
       })
@@ -867,11 +1020,6 @@ export default {
     "toPlace": "[107.654650, 33.637012]"
   },
       * */
-
-    },
-
-
-    raise_dispute() {
 
     },
 

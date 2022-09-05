@@ -15,22 +15,13 @@
         <span>欢迎登陆!</span>
       </div>
       <el-input placeholder="ID" v-model="userID" clearable></el-input>
-      <br/>      <br/>
+      <br/> <br/>
       <br/>
 
       <el-input placeholder="密码" v-model="pwd" clearable show-password></el-input>
-      <div style="margin-top: 5%">
-        <Vcode
-            :show="isShow"
-            @success="success"
-            @close="close"
-        />
-        <el-button @click="isShow = true">验证</el-button>
-        <el-button type="primary" disabled v-if="!verified"> 请先验证</el-button>
-        <el-button type="primary"  @click="login" v-else> 登录</el-button>
-      </div>
-      <div  style="margin-top: 5%">
-        您将作为 {{ this.type_ }} 登录
+      <el-button @click="login"> 登录</el-button>
+      <div>
+        系统管理员登录页面
       </div>
 
     </el-card>
@@ -39,39 +30,31 @@
   </div>
 </template>
 
+
 <script>
 import axios from "axios";
 import sjcl from "sjcl";
-import Vcode from "vue-puzzle-vcode";
-
 
 export default {
-  components: {
-    Vcode
-  },
-
-  name: "Login",
+  name: "AdminLogin",
   beforeCreate: function () {
     document.body.className = 'home';
   },
 
   computed: {
     signUpType() {
-      return this.$route.params.type_
+      return "admin"
     },
   },
 
   data() {
     return {
-      verified: false,
       pwd: "",
       userID: "",
       spring_boot_url_base: "http://localhost:17747/",
-      type_: this.$route.params.type_,
-      isShow: false,
+      type_: "admin",
     }
   },
-
   methods: {
     login() {
       this.axiosGet("acc/login", "GET",
@@ -84,37 +67,15 @@ export default {
             console.log(response.data)
             let status = response.data
             if (status === 'success') {
-              if (this.signUpType === 'customer') {
-                this.$router.push({
-                  name: 'CustomerMain',
-                  params: {
-                    id_: this.userID
-                  }
-                })
-              } else if (this.signUpType === 'driver') {
-                this.$router.push({
-                  name: 'DriverMain',
-                  params: {
-                    id_: this.userID
-                  }
-                })
-              }
+              this.$router.push({
+                name: 'AdminMain',
+                params: {
+                  id_: this.userID
+                }
+              })
             }
           }
       )
-    },
-
-    submit(){
-      this.isShow = true;
-    },
-    // 用户通过了验证
-    success(){
-      this.verified = true
-      this.isShow = false; // 通过验证后，需要手动隐藏模态框
-    },
-    // 用户点击遮罩层，应该关闭模态框
-    close(){
-      this.isShow = false;
     },
     axiosGet(url, httpType, params, _config, lambdaThen) {
       axios({
@@ -138,6 +99,10 @@ export default {
       let sha_beta = this.my_sha256(salt + sha_alpha)
       let total = this.userID + sha_beta
       return this.my_sha256(total);
+    },
+
+    notNil(obj) {
+      return !(obj === null || obj === undefined)
     },
   }
 }

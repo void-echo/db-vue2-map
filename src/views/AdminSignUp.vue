@@ -23,13 +23,11 @@
         <el-input placeholder="电话号码" v-model="tel" clearable></el-input>
         <el-input placeholder="邮箱" v-model="mail" clearable></el-input>
         <el-button @click="signUp"> 注册</el-button>
-        <el-button @click="change2driver" v-if="this.signUpType === 'customer'"> 我是司机 </el-button>
-        <el-button @click="change2customer" v-else> 我是用户 </el-button>
-        <el-button @click="disappear"> 返回欢迎界面 </el-button>
+        <el-button @click="disappear"> 返回欢迎界面</el-button>
       </div>
 
       <div class="message">
-        目前, 您将作为 {{this.showingSignType}} 注册.
+        目前, 您正在注册成为管理员.
       </div>
 
 
@@ -45,12 +43,7 @@ import axios from 'axios'
 import sjcl from 'sjcl'
 
 export default {
-  name: 'HelloWorld',
-  props: {
-    msg: String
-  },
-
-
+  name: "AdminSignUp",
   data() {
     return {
       spring_boot_url_base: "http://localhost:17747/",
@@ -59,61 +52,46 @@ export default {
       userName: "",
       tel: "",
       mail: "",
-      signUpType: "customer"
+      signUpType: "admin"
     }
   },
 
-  computed: {
-    showingSignType() {
-      return this.signUpType === 'customer' ? "顾客" : "司机"
-    }
-  },
   methods: {
-    change2driver() {
-      this.signUpType = "driver"
-    },
-
-    change2customer() {
-      this.signUpType = "customer"
-    },
-
     disappear() {
       this.$router.push('/welcome')
     },
 
-    signUp() {
-      if (this.signUpType === "customer") {
-        this.axiosGet("customer", "POST", {
-          id: this.userID,
-          name: this.userName,
-          tel: this.tel,
-          mail: this.mail,
-          passwordSha256: this.pwdEncode(this.pwd)
-        }, {}, (response) => {
-          if (response.status === 200) {
-            this.redirectToLogin()
-          } else {
-            console.log(response)
-          }
-        });
-      } else if (this.signUpType === "driver") {
-        this.axiosGet("driver", "POST", {
-          id: this.userID,
-          name: this.userName,
-          tel: this.tel,
-          mail: this.mail,
-          passwordSha256: this.pwdEncode(this.pwd)
-        }, {}, (response) => {
-          if (response.status === 200) {
-            this.redirectToLogin()
-          } else {
-            console.log(response)
-          }
-        })
-      }
+    submitUpload() {
+      this.$refs.upload.submit();
+      this.fileList = []
+    },
+    handleRemove(file, fileList) {
+      console.log(file, fileList);
+    },
+    handlePreview(file) {
+      console.log(file);
     },
 
-    // if status === 200, redirect to Login page.
+    united_print(obj) {
+      console.log(JSON.stringify(obj, null, 2));
+    },
+    signUp() {
+      this.axiosGet("admin", "POST", {
+        id: this.userID,
+        name: this.userName,
+        tel: this.tel,
+        mail: this.mail,
+        passwordSha256: this.pwdEncode(this.pwd)
+      }, {}, (response) => {
+        if (response.status === 200) {
+          this.redirectToLogin()
+        } else {
+          console.log(response)
+        }
+      });
+
+    },
+
     redirectToLogin() {
       this.$message({
         message: "注册成功！即将重定向至登录界面",
@@ -125,7 +103,7 @@ export default {
         let loginType = this.signUpType
         //
         this.$router.push({
-          name: "Login",
+          name: "AdminLogin",
           params: {
             type_: loginType
           }
@@ -147,7 +125,6 @@ export default {
     },
 
 
-
     axiosGet(url, httpType, params, _config, lambdaThen) {
       axios({
         url: url,
@@ -157,11 +134,7 @@ export default {
         params: params
       }).then(lambdaThen);
     },
-
-
   }
-
-
 }
 </script>
 
