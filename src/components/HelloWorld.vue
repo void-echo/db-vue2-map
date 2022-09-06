@@ -80,8 +80,44 @@ export default {
     disappear() {
       this.$router.push('/welcome')
     },
+    errorMsg(msg) {
+      this.$message({
+        message: msg,
+        showClose: true,
+        type: "error"
+      })
+    },
+
+    serverErr() {
+      this.errorMsg("服务器内部错误, 请稍后重试")
+    },
+
+    warnMsg(msg) {
+      this.$message({
+        message: msg,
+        showClose: true,
+        type: "warning"
+      })
+    },
+
+    successMsg(msg) {
+      this.$message({
+        message: msg,
+        showClose: true,
+        type: "success"
+      })
+    },
+
+
 
     signUp() {
+      if (!this.isCorrect_phone()) {
+        this.warnMsg("手机号格式不正确")
+        this.tel = ""
+      } else if (!this.isCorrect_mail()) {
+        this.warnMsg("邮箱格式不正确")
+        this.mail = ""
+      }
       if (this.signUpType === "customer") {
         this.axiosGet("customer", "POST", {
           id: this.userID,
@@ -157,6 +193,57 @@ export default {
         params: params
       }).then(lambdaThen);
     },
+
+    isCorrect_phone() {
+      var res = /^1[3,456.789][0-9]{9}$/
+      return res.test(this.tel)
+    },
+
+    isCorrect_mail() {
+      var res = /^\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$/
+      return res.test(this.mail)
+    },
+
+    // 匹配手机号
+// var res = /^[1][3,4,5,6.7,8,9][0-9]{9}$/
+// let num = 18045216903
+// console.log(res.test(num))
+
+// 匹配身份证号码
+// var res = /(^\d{15}$)|(^\d{18}$)|(^\d{17}(\d|X|x)$)/
+// var n='52032119890615548X'
+// console.log(res.test(n));
+
+// 匹配用户名6-8位（纯数字）
+// var res = /^[^0]\d{5,7}$/
+// var user=12345678
+// console.log(res.test(user));
+
+// 匹配密码6-8位（数字加字符）
+// var res=/^\w{5,7}$/
+// var pwd='12345d_'
+// console.log(res.test(pwd));
+
+// 匹配QQ号码
+// var res = /^[^0]\d{4,9}$/  //  /^[1-9][0-9]{4,9}$/
+// var q = '0848514604'
+// console.log(res.test(q));
+
+// 取掉前后空格
+// var res =/(^\s*)|(\s*$)/g
+// let str = '  dsf sdfs fsdf 第三方  '
+// console.log(str.replace(res,""))
+
+// 取掉所有空格
+// var res =/\s/g
+// let str = '  dsf sdfs fsdf 第三方  '
+// console.log(str.replace(res,""))
+
+// 匹配邮箱
+// var res = /^\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$/
+// var email='2384591034@gamil.com'
+// console.log(res.test(email));
+
 
 
   }

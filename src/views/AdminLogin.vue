@@ -73,10 +73,42 @@ export default {
                   id_: this.userID
                 }
               })
+            } else {
+              this.warnMsg("用户名或密码不正确")
             }
           }
       )
     },
+
+    errorMsg(msg) {
+      this.$message({
+        message: msg,
+        showClose: true,
+        type: "error"
+      })
+    },
+
+    serverErr() {
+      this.errorMsg("服务器内部错误, 请稍后重试")
+    },
+
+    warnMsg(msg) {
+      this.$message({
+        message: msg,
+        showClose: true,
+        type: "warning"
+      })
+    },
+
+    successMsg(msg) {
+      this.$message({
+        message: msg,
+        showClose: true,
+        type: "success"
+      })
+    },
+
+
     axiosGet(url, httpType, params, _config, lambdaThen) {
       axios({
         url: url,

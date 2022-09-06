@@ -99,6 +99,8 @@ export default {
                   }
                 })
               }
+            } else {
+              this.warnMsg("用户名或密码不正确")
             }
           }
       )
@@ -107,6 +109,34 @@ export default {
     submit(){
       this.isShow = true;
     },
+    errorMsg(msg) {
+      this.$message({
+        message: msg,
+        showClose: true,
+        type: "error"
+      })
+    },
+
+    serverErr() {
+      this.errorMsg("服务器内部错误, 请稍后重试")
+    },
+
+    warnMsg(msg) {
+      this.$message({
+        message: msg,
+        showClose: true,
+        type: "warning"
+      })
+    },
+
+    successMsg(msg) {
+      this.$message({
+        message: msg,
+        showClose: true,
+        type: "success"
+      })
+    },
+
     // 用户通过了验证
     success(){
       this.verified = true

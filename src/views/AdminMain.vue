@@ -31,6 +31,10 @@
                   <i class="el-icon-menu"></i>
                   <span slot="title">争执</span>
                 </el-menu-item>
+                <el-menu-item index="5" @click="updateDateAndChangeView(5)">
+                  <i class="el-icon-menu"></i>
+                  <span slot="title">统计</span>
+                </el-menu-item>
               </el-menu>
             </el-col>
           </el-row>
@@ -135,6 +139,41 @@
 
             </el-table>
           </div>
+
+          <!--     Chart     -->
+          <div v-if="view.visibleContentIndex === 5" style=" border-radius: 30px; margin-top: -18px">
+            <div style="height: 300px; width: 100%; margin-bottom: 3%">
+              <el-card style="box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 30px; height: 100%">
+                <div id="billNumPerDay" style="height: 300px; width: 100%">
+
+                </div>
+              </el-card>
+            </div>
+
+            <div style="height: 300px; width: 100%; margin-bottom: 3%">
+              <el-card style="box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 30px; height: 100%">
+                <div id="billAmountPerDay" style="height: 300px; width: 100%">
+
+                </div>
+              </el-card>
+            </div>
+
+            <div style="height: 300px; width: 100%; margin-bottom: 3%">
+              <el-card style="box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 30px; height: 100%">
+                <div id="billAmountPerCustomer" style="height: 300px; width: 100%">
+
+                </div>
+              </el-card>
+            </div>
+
+            <div style="height: 300px; width: 100%; margin-bottom: 3%">
+              <el-card style="box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 30px; height: 100%">
+                <div id="billAmountPerDriver" style="height: 300px; width: 100%">
+
+                </div>
+              </el-card>
+            </div>
+          </div>
         </div>
 
         <div v-else>
@@ -170,6 +209,7 @@
 
 <script>
 import axios from "axios";
+import * as echarts from 'echarts';
 
 export default {
   name: "AdminMain",
@@ -224,6 +264,16 @@ export default {
       credit_cards: {
         contents: []
       },
+      lookUpTable: {
+        "HANGING": "已发起",
+        "WAITING": "等待中",
+        "GOING": "进行中",
+        "NOT_PAID": "未支付",
+        "NOT_SCORED": "未评分",
+        "FINISHED": "已完成",
+        "ON_DISPUTE": "有争议",
+        "ARCHIVED": "已归档"
+      },
     }
   },
 
@@ -260,6 +310,12 @@ export default {
               this.serverErr()
             } else {
               this.bills.contents = res.data
+              this.bills.contents.forEach((el) => {
+                el["status"] = this.lookUpTable[el["status"]]
+                let str_ = el["time"]
+                str_ = str_.replace('.000+00:00', '')
+                el["time"] = str_
+              })
             }
           })
     },
@@ -347,6 +403,62 @@ export default {
       })
     },
 
+    /*
+    var myChart = echarts.init(document.querySelector("#myChart__"));
+      // 绘制图表
+      myChart.setOption({
+        title: {
+          text: 'ECharts 入门示例'
+        },
+        tooltip: {},
+        xAxis: {
+          data: ['衬衫', '羊毛衫', '雪纺衫', '裤子', '高跟鞋', '袜子']
+        },
+        yAxis: {},
+        series: [
+          {
+            name: '销量',
+            type: 'bar',
+            data: [5, 20, 36, 10, 10, 20]
+          }
+        ]
+      });
+    *
+    * */
+    updateCharts() {
+      var ch1 = echarts.init(document.querySelector("#billNumPerDay"));
+      this.axiosGet_Header("running/status/get-bill-num-by-day", "GET", {
+
+      }, {}, (res) => {
+        if (res.status === 200) {
+          let dt = res.data
+          /*
+            {
+              "2022-09-05": 5,
+              "2022-09-06": 3
+            }
+          * */
+          ch1.setOption({
+            title: {
+              text: '总订单数 / 天'
+            },
+            tooltip: {},
+            xAxis: {
+              data: Object.keys(dt)
+            },
+            yAxis: {},
+            series: [
+              {
+                name: '订单数',
+                type: 'bar',
+                data: [2, 4, 6, 8, 10, 12]
+              }
+            ]
+          })
+        } else this.serverErr()
+      })
+    },
+
 
     updateDateAndChangeView(num) {
       if (num === 1) {
@@ -355,8 +467,12 @@ export default {
         this.updateDrivers()
       } else if (num === 3) {
         this.updateBills()
-      } else {
+      } else if (num === 4) {
         this.updateDisputes()
+      } else {
+        setTimeout(() => {
+          this.updateCharts()
+        }, 100)
       }
       this.view.visibleContentIndex = num
     }

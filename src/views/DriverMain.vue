@@ -101,13 +101,12 @@
             :data="allBillsOfMe"
             height="500"
             border
-            :default-sort = "{prop: 'id', order: 'descending'}"
+            :default-sort="{prop: 'id', order: 'descending'}"
             style="width: 100%">
           <el-table-column sortable prop="id" label="编号" width="180"></el-table-column>
           <el-table-column sortable prop="time" label="姓名" width="180"></el-table-column>
           <el-table-column sortable prop="money" label="金额"></el-table-column>
           <el-table-column sortable prop="score" label="评分"></el-table-column>
-          <el-table-column sortable prop="driverId" label="司机用户名"></el-table-column>
           <el-table-column sortable prop="customerId" label="顾客用户名"></el-table-column>
           <el-table-column sortable prop="status" label="状态"></el-table-column>
           <el-table-column sortable prop="duration" label="持续时间"></el-table-column>
@@ -207,7 +206,7 @@
         </div>
       </div>
 
-      <el-dialog :visible.sync="inner2visible" append-to-body>
+      <el-dialog :visible.sync="inner2visible" append-to-body @close="clearCar2TypesInnerVisible">
         <div>
           <div v-if="signUpForCarVisible">
             <div>ID
@@ -263,6 +262,7 @@ export default {
     this.initMap();
     document.addEventListener('keydown', this.handleKeyDown);
     this.init_socket();
+    this.init_profile___(this.id_)
   },
 
 
@@ -283,7 +283,19 @@ export default {
 
   data() {
     return {
+      visibleAllBillsOfMe: null,
       allBillsOfMe: null,
+      geocoder: null,
+      lookUpTable: {
+        "HANGING": "已发起",
+        "WAITING": "等待中",
+        "GOING": "进行中",
+        "NOT_PAID": "未支付",
+        "NOT_SCORED": "未评分",
+        "FINISHED": "已完成",
+        "ON_DISPUTE": "有争议",
+        "ARCHIVED": "已归档"
+      },
       layOut_: {
         DiTuVisible: true,
         DingDanVisible: false,
@@ -400,19 +412,76 @@ export default {
 
 
   methods: {
+    clearCar2TypesInnerVisible() {
+      this.signUpForCarVisible = false;
+      this.bindCarVisible = false
+    },
 
     changeImage2() {
       this.Image2 = true
     },
+    updateAllBillsOfMe2Visible() {
+      this.visibleAllBillsOfMe = this.allBillsOfMe
+      this.visibleAllBillsOfMe.forEach((el) => {
+        // for each begin
+        this.geocoder.getAddress(JSON.parse(el["fromPlace"]), (status, result) => {
+          if (status === 'complete' && result.regeocode) {
+            el["fromPlace"] = result.regeocode.formattedAddress
+          } else {
+            console.log('根据经纬度查询地址失败')
+          }
+        });
+
+        this.geocoder.getAddress(JSON.parse(el["toPlace"]), (status, result) => {
+          if (status === 'complete' && result.regeocode) {
+            el["toPlace"] = result.regeocode.formattedAddress
+          } else {
+            console.log('根据经纬度查询地址失败')
+          }
+        });
+        el["status"] = this.lookUpTable[el["status"]]
+        let str_ = el["time"]
+        str_ = str_.replace('.000+00:00', '')
+        el["time"] = str_
+        // TODO HERE: TIME FORMAT
+        // for each end
+      })
+    },
+    errorMsg(msg) {
+      this.$message({
+        message: msg,
+        showClose: true,
+        type: "error"
+      })
+    },
+
+    serverErr() {
+      this.errorMsg("服务器内部错误, 请稍后重试")
+    },
+
+    successMsg(msg) {
+      this.$message({
+        message: msg,
+        showClose: true,
+        type: "success"
+      })
+    },
+
     getAllBillsOfMe() {
       this.axiosGet_Config("bill/get-all-by-driver", "GET", {
         driverId: this.id_
       }, {}, (res) => {
         if (res.status === 200) {
           this.allBillsOfMe = res.data;
+          this.allBillsOfMe = res.data;
+          this.updateAllBillsOfMe2Visible()
           this.layOut_.DingDanVisible = true
         }
       })
+    },
+
+    haveCustomer() {
+      return (this.notNil(this.customer) && (this.customer.id !== ""))
     },
     confirmBillPrice() {
       this.axiosGet_Config("running/store1bill", "GET", {
@@ -432,7 +501,7 @@ export default {
       AMapLoader.load({
         key: "ca1beeb0abaeca2b3c3ab0a5ce115a6d",             // 申请好的Web端开发者Key，首次调用 load 时必填
         version: "2.0",      // 指定要加载的 JSAPI 的版本，缺省时默认为 1.4.15
-        plugins: ['AMap.Driving', 'AMap.ToolBar', 'AMap.Geolocation', 'AMap.Scale'],
+        plugins: ['AMap.Driving', 'AMap.ToolBar', 'AMap.Geolocation', 'AMap.Scale', 'AMap.Geocoder'],
         // 需要使用的的插件列表，如比例尺'AMap.Scale等
       }).then((AMap_) => {
         this.map = new AMap_.Map("mapContainer", {  //设置地图容器id
@@ -441,6 +510,10 @@ export default {
           zoom: 5,           //初始化地图级别
           center: this.now_status.my_place, //初始化地图中心点位置
         });
+
+        AMap.plugin('AMap.Geocoder', () => {
+          this.geocoder = new AMap.Geocoder({})
+        })
 
         AMap.plugin('AMap.ToolBar', () => {//异步加载插件
           var toolbar = new AMap.ToolBar();
@@ -724,6 +797,30 @@ export default {
       }
     },
 
+    init_profile___(id) {
+      this.axiosGet_Config("running/driverInfo", "GET", {driverId: id}, {},
+          (response) => {
+            let dt = response.data;
+            this.driver.id = dt["id"]
+            this.driver.mail = dt["mail"];
+            this.driver.tel = dt["tel"];
+            this.driver.name = dt["name"];
+            this.driver.carId = dt["carId"];
+            this.UPDATE_HIS_CAR()
+          });
+
+      this.axiosGet_Header("file/get-pic", "GET", {type: "driver", id: id}, {'Content-type': 'image/jpeg'},
+          (response) => {
+            if (response.data === "") {
+              console.log("司机没有头像")
+            } else {
+              this.driver.haveImg = false;
+              this.driver.image = 'data:image/jpg;base64,'.concat(response.data);
+              this.driver.haveImg = true;
+            }
+          });
+    },
+
     init_profile(id) {
       this.axiosGet_Config("running/driverInfo", "GET", {driverId: id}, {},
           (response) => {
@@ -751,6 +848,7 @@ export default {
 
 
     UPDATE_HIS_CAR() {
+      this.united_print(this.driver)
       if ((this.driver.carId !== "") && this.notNil(this.driver.carId)) {
         this.layOut_.haveCar = true
         console.log("UPDATE_HIS_CAR() 显示司机有没有车?" + ((this.driver.carId !== "") && this.notNil(this.driver.carId)))

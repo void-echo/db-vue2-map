@@ -131,7 +131,8 @@
           <el-button @click="dispute.cancelConfirm = true"> 取消投诉 </el-button>
         </span>
 
-        <el-dialog title="确认取消本次投诉吗?" :visible.sync="dispute.cancelConfirm" append-to-body width="90%" fullscreen
+        <el-dialog title="确认取消本次投诉吗?" :visible.sync="dispute.cancelConfirm" append-to-body width="90%"
+                   fullscreen
                    style="box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 30px;margin: 20%;">
           <el-button @click="cancelDispute">确认</el-button>
         </el-dialog>
@@ -242,22 +243,50 @@
     <el-dialog title="已成功找到司机" :visible.sync="now_status.driver.infoVisible" width="90%" fullscreen
                style="box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); border-radius: 30px;margin: 12%;">
       <div>
-        <div v-if="now_status.driver.haveImg">
+        <div v-if="driver.haveImg">
           <div style="align-items: center; text-align: center">
             <div class="grid-content bg-purple">
-              <avatar :src="now_status.driver.img" :size="100"></avatar>
+              <avatar :src="driver.image" :size="100"></avatar>
             </div>
           </div>
         </div>
         <el-descriptions class="margin-top" :column="2">
-          <el-descriptions-item label="ID "> {{ this.now_status.driver.id }}</el-descriptions-item>
-          <el-descriptions-item label="昵称"> {{ this.now_status.driver.name }}</el-descriptions-item>
-          <el-descriptions-item label="电话"> {{ this.now_status.driver.tel }}</el-descriptions-item>
-          <el-descriptions-item label="邮箱"> {{ this.now_status.driver.mail }}</el-descriptions-item>
+          <el-descriptions-item label="ID "> {{ driver.id }}</el-descriptions-item>
+          <el-descriptions-item label="昵称"> {{ driver.name }}</el-descriptions-item>
+          <el-descriptions-item label="电话"> {{ driver.tel }}</el-descriptions-item>
+          <el-descriptions-item label="邮箱"> {{ driver.mail }}</el-descriptions-item>
         </el-descriptions>
         <div>
-          <el-button @click="() => {}"> 确定</el-button>
+          <br/><br/>
+          <div>
+            <div v-if="layOut_.haveCar">
+              <div v-if="driver.hisCar.haveImg">
+                <div style="align-items: center; text-align: center">
+                  <div class="grid-content bg-purple">
+                    <avatar :src="driver.hisCar.image" :size="100"></avatar>
+                  </div>
+                </div>
+              </div>
+              <el-descriptions class="margin-top" :column="2">
+                <!--            id: "",
+                          use_start_time: "",
+                          band: "",
+                          type: "",
+                          max_speed: 0,
+                          haveImg: false,
+                          img: ""-->
+                <el-descriptions-item label="用户名"> {{ this.driver.hisCar.id }}</el-descriptions-item>
+                <el-descriptions-item label="开始使用时间"> {{ this.driver.hisCar.use_start_time }}</el-descriptions-item>
+                <el-descriptions-item label="车型"> {{ this.driver.hisCar.type }}</el-descriptions-item>
+                <el-descriptions-item label="最高时速"> {{ this.driver.hisCar.max_speed }}</el-descriptions-item>
+              </el-descriptions>
+
+            </div>
+          </div>
         </div>
+        <span slot="footer"  class="dialog-footer">
+          <el-button @click="now_status.driver.infoVisible = false"> 确定</el-button>
+        </span>
       </div>
     </el-dialog>
 
@@ -288,6 +317,25 @@ export default {
 
   data() {
     return {
+      driver: {
+        id: "",
+        name: "",
+        tel: "",
+        mail: "",
+        haveImg: false,
+        image: "",
+        carId: "",
+        hisCar: {
+          id: "",
+          use_start_time: "",
+          band: "",
+          type: "",
+          max_speed: 0,
+          haveImg: false,
+          img: ""
+        }
+      },
+      mapClicked: false,
       dispute: {
         billId: '',
         type: '',
@@ -341,7 +389,8 @@ export default {
         DiTuVisible: true,
         DingDanVisible: false,
         YuEVisible: false,
-        WoDeVisible: false
+        WoDeVisible: false,
+        haveCar: false
       },
       give_score_dialog_visible: false,
       my_score: 5,
@@ -449,6 +498,10 @@ export default {
 
   methods: {
     toHere() {
+      if (!this.mapClicked) {
+        this.warnMsg("请先选择目的地点")
+        return
+      }
       this.axiosGet_Header("running/query4new-travel", "POST",
           {
             customerId: this.id_,
@@ -492,10 +545,14 @@ export default {
 
       setTimeout(() => {
         this.goOnReservedBill()
-      }, 12000)
+      }, 15000)
     },
 
     YO_YAKU() {
+      if (!this.mapClicked) {
+        this.warnMsg("请先选择目的地点")
+        return
+      }
       this.selectedYoYaKuTime_visible = true
     },
     changeImage() {
@@ -520,8 +577,7 @@ export default {
         });
 
         AMap.plugin('AMap.Geocoder', () => {
-          var geocoder = new AMap.Geocoder({})
-          this.geocoder = geocoder
+          this.geocoder = new AMap.Geocoder({})
         })
 
         this.geoVar = new AMap.Geolocation({
@@ -541,6 +597,7 @@ export default {
       }).catch(e => {
         console.log(e);
       });
+      setTimeout(this.openGPS, 1000)
     },
 
     openGPS() {
@@ -636,6 +693,14 @@ export default {
       this.errorMsg("服务器内部错误, 请稍后重试")
     },
 
+    warnMsg(msg) {
+      this.$message({
+        message: msg,
+        showClose: true,
+        type: "warning"
+      })
+    },
+
     successMsg(msg) {
       this.$message({
         message: msg,
@@ -684,12 +749,10 @@ export default {
 
 
     handleKeyDown(e) {
-      console.log("ON_CAR = " + this.on_car)
+
       if (!this.on_car) {
         var key = window.event ? e.keyCode : e.which;
         if (key === 65 || key === 83 || key === 68 || key === 87) {
-          console.log("key = " + key)
-          console.log("NotNil: MyPlaceMarker = " + !(this.now_status.my_dot_marker === null || this.now_status.my_dot_marker === undefined))
           if (!(this.now_status.my_dot_marker === null || this.now_status.my_dot_marker === undefined)) {
             this.map.remove(this.now_status.my_dot_marker);
           }
@@ -707,7 +770,6 @@ export default {
             // W
             this.now_status.my_place[1] += this.speed
           }
-          console.log("监听器说：现在位置" + this.now_status.my_place)
           this.setMyDot()
         }
       }
@@ -745,9 +807,17 @@ export default {
     },
 
     clickedMap(event_) {
+      this.mapClicked = true
       this.target_place = [event_.lnglat.getLng(), event_.lnglat.getLat()];
+      var endIcon = new AMap.Icon({
+        size: new AMap.Size(25, 34),
+        image: '//a.amap.com/jsapi_demos/static/demo-center/icons/dir-marker.png',
+        imageSize: new AMap.Size(135, 40),
+        imageOffset: new AMap.Pixel(-95, -3)
+      });
       var marker = new AMap.Marker({
         position: this.target_place,
+        icon: endIcon,
         title: '目的地'
       });
       if (!(this.target_place_marker === null || this.target_place_marker === undefined)) {
@@ -892,7 +962,12 @@ export default {
           }
         }
         if (this.notNil(obj["ID"])) {
+          let _id = obj["ID"]
           let _msg = (this.notNil(obj["yyk"]) && obj["yyk"] === true) ? "成功找到预约了的司机" : "成功找到司机: "
+          if (_msg === "成功找到司机: ") {
+            this.init_profile_for_driver(_id)
+            this.now_status.driver.infoVisible = true
+          }
           this.$message({
             showClose: true,
             message: _msg + obj["ID"],
@@ -950,6 +1025,51 @@ export default {
 
     },
 
+    UPDATE_HIS_CAR() {
+      this.united_print(this.driver)
+      if ((this.driver.carId !== "") && this.notNil(this.driver.carId)) {
+        this.layOut_.haveCar = true
+        console.log("UPDATE_HIS_CAR() 显示司机有没有车?" + ((this.driver.carId !== "") && this.notNil(this.driver.carId)))
+        this.axiosGet_Config("car/" + this.driver.carId, "GET", {}, {},
+            (res) => {
+              let dt = res.data;
+              if (this.notNil(dt)) {
+                if (this.notNil(dt["id"])) {
+                  this.driver.hisCar.id = dt["id"]
+                }
+                if (this.notNil(dt["startUsingTime"])) {
+                  this.driver.hisCar.use_start_time = dt["startUsingTime"]
+                }
+                if (this.notNil(dt["band"])) {
+                  this.driver.hisCar.band = dt["band"]
+                }
+                if (this.notNil(dt["carType"])) {
+                  this.driver.hisCar.type = dt["carType"]
+                }
+                if (this.notNil(dt["maxSpeed"])) {
+                  this.driver.hisCar.max_speed = dt["maxSpeed"]
+                }
+              }
+
+              this.axiosGet_Header("file/get-pic", "GET", {
+                type: "car",
+                id: this.driver.hisCar.id
+              }, {'Content-type': 'image/jpeg'}, (response) => {
+                if (response.data === "") {
+                  console.log("汽车没有图片")
+                } else {
+                  this.driver.hisCar.haveImg = false;
+                  this.driver.hisCar.image = 'data:image/jpg;base64,'.concat(response.data);
+                  this.driver.hisCar.haveImg = true;
+                }
+              })
+            })
+
+      }
+
+    },
+
+
     // "PayAndGiveScore")
     // giveScore(String billId, Optional<Integer> score_)
     give_score() {
@@ -969,7 +1089,7 @@ export default {
     cancelDispute() {
       this.axiosGet_Config("running/cancel-dispute", "GET", {
         billId: this.dispute.check.billId
-      }, {}, (res)=>{
+      }, {}, (res) => {
         if ((res.status === 200) && (res.data === "success")) {
           this.successMsg("取消投诉成功.")
         } else if (res.status === 500) {
@@ -1042,6 +1162,30 @@ export default {
     linearDistance(LngLatA, LngLatB) {
       return AMap.GeometryUtil.distance(p1, p2);
     },
+    init_profile_for_driver(id) {
+      this.axiosGet_Config("running/driverInfo", "GET", {driverId: id}, {},
+          (response) => {
+            let dt = response.data;
+            this.driver.id = dt["id"]
+            this.driver.mail = dt["mail"];
+            this.driver.tel = dt["tel"];
+            this.driver.name = dt["name"];
+            this.driver.carId = dt["carId"];
+            this.UPDATE_HIS_CAR()
+          });
+
+      this.axiosGet_Header("file/get-pic", "GET", {type: "driver", id: id}, {'Content-type': 'image/jpeg'},
+          (response) => {
+            if (response.data === "") {
+              console.log("司机没有头像")
+            } else {
+              this.driver.haveImg = false;
+              this.driver.image = 'data:image/jpg;base64,'.concat(response.data);
+              this.driver.haveImg = true;
+            }
+          });
+    },
+
 
     init_profile(id) {
       this.axiosGet_Config("running/customerInfo", "GET", {customerId: id}, {},

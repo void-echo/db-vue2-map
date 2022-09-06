@@ -10,6 +10,7 @@
   "dependencies": {
     "@amap/amap-jsapi-loader": "^1.0.1",
     "core-js": "^3.6.5",
+    "echarts": "^5.3.3",
     "element-ui": "^2.4.5",
     "js-base64": "^3.7.2",
     "js-sha256": "^0.9.0",

@@ -17,11 +17,11 @@
       </div>
 
       <div class="test">
-        <el-input placeholder="ID" v-model="userID" clearable></el-input>
-        <el-input show-password placeholder="密码" v-model="pwd" clearable></el-input>
-        <el-input placeholder="昵称" v-model="userName" clearable></el-input>
-        <el-input placeholder="电话号码" v-model="tel" clearable></el-input>
-        <el-input placeholder="邮箱" v-model="mail" clearable></el-input>
+        <el-input placeholder="ID" v-model="userID" clearable></el-input><br/><br/>
+        <el-input show-password placeholder="密码" v-model="pwd" clearable></el-input><br/><br/>
+        <el-input placeholder="昵称" v-model="userName" clearable></el-input><br/><br/>
+        <el-input placeholder="电话号码" v-model="tel" clearable></el-input><br/><br/>
+        <el-input placeholder="邮箱" v-model="mail" clearable></el-input><br/><br/>
         <el-button @click="signUp"> 注册</el-button>
         <el-button @click="disappear"> 返回欢迎界面</el-button>
       </div>
@@ -44,6 +44,9 @@ import sjcl from 'sjcl'
 
 export default {
   name: "AdminSignUp",
+  beforeCreate: function () {
+    document.body.className = 'home';
+  },
   data() {
     return {
       spring_boot_url_base: "http://localhost:17747/",
@@ -76,6 +79,15 @@ export default {
       console.log(JSON.stringify(obj, null, 2));
     },
     signUp() {
+      if (!this.isCorrect_phone()) {
+        this.warnMsg("手机号格式不正确")
+        this.tel = ""
+        return
+      } else if (!this.isCorrect_mail()) {
+        this.warnMsg("邮箱格式不正确")
+        this.mail = ""
+        return
+      }
       this.axiosGet("admin", "POST", {
         id: this.userID,
         name: this.userName,
@@ -90,6 +102,16 @@ export default {
         }
       });
 
+    },
+
+    isCorrect_phone() {
+      var res = /^1[3,456.789][0-9]{9}$/
+      return res.test(this.tel)
+    },
+
+    isCorrect_mail() {
+      var res = /^\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$/
+      return res.test(this.mail)
     },
 
     redirectToLogin() {
@@ -134,6 +156,35 @@ export default {
         params: params
       }).then(lambdaThen);
     },
+
+    errorMsg(msg) {
+      this.$message({
+        message: msg,
+        showClose: true,
+        type: "error"
+      })
+    },
+
+    serverErr() {
+      this.errorMsg("服务器内部错误, 请稍后重试")
+    },
+
+    warnMsg(msg) {
+      this.$message({
+        message: msg,
+        showClose: true,
+        type: "warning"
+      })
+    },
+
+    successMsg(msg) {
+      this.$message({
+        message: msg,
+        showClose: true,
+        type: "success"
+      })
+    },
+
   }
 }
 </script>
